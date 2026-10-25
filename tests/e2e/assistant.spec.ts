@@ -5,7 +5,7 @@ test('creates and approves a campaign from a plain-language request', async ({ p
 
   await expect(page.getByRole('heading', { name: 'What would you like to market today?' })).toBeVisible();
 
-  const request = page.getByLabel('Campaign request');
+  const request = page.getByRole('textbox', { name: 'Campaign request' });
   await request.fill('Promote our Sunday brunch and get more bookings');
   await page.getByRole('button', { name: 'Send campaign request' }).click();
 
