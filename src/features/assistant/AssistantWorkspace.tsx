@@ -202,8 +202,8 @@ export function AssistantWorkspace() {
                 }
               }}
               placeholder="Example: Promote our Sunday brunch and get more bookings"
-              aria-label="Campaign request"
               slotProps={{
+                htmlInput: { 'aria-label': 'Campaign request' },
                 input: {
                   endAdornment: (
                     <IconButton
@@ -321,7 +321,12 @@ export function AssistantWorkspace() {
                 {approved && (
                   <Paper
                     elevation={0}
-                    sx={{ p: 1.5, bgcolor: 'success.50', border: 1, borderColor: 'success.100' }}
+                    sx={(theme) => ({
+                      p: 1.5,
+                      bgcolor: alpha(theme.palette.success.main, 0.08),
+                      border: 1,
+                      borderColor: alpha(theme.palette.success.main, 0.24),
+                    })}
                   >
                     <Typography variant="body2" color="success.dark" sx={{ fontWeight: 650 }}>
                       Campaign approved. Publishing remains disabled in this foundation build until real social accounts are connected.

@@ -1,5 +1,5 @@
 import CampaignRoundedIcon from '@mui/icons-material/CampaignRounded';
-import { Box, Card, CardContent, Chip, Container, Stack, Typography } from '@mui/material';
+import { alpha, Box, Card, CardContent, Chip, Container, Stack, Typography } from '@mui/material';
 import { AppShell } from '@/components/layout/AppShell';
 
 const campaigns = [
@@ -22,7 +22,17 @@ export default function CampaignsPage() {
             <Card key={campaign.title}>
               <CardContent>
                 <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ alignItems: { sm: 'center' } }}>
-                  <Box sx={{ width: 44, height: 44, borderRadius: 2.5, display: 'grid', placeItems: 'center', bgcolor: 'primary.50', color: 'primary.main' }}>
+                  <Box
+                    sx={(theme) => ({
+                      width: 44,
+                      height: 44,
+                      borderRadius: 2.5,
+                      display: 'grid',
+                      placeItems: 'center',
+                      bgcolor: alpha(theme.palette.primary.main, 0.08),
+                      color: 'primary.main',
+                    })}
+                  >
                     <CampaignRoundedIcon />
                   </Box>
                   <Box sx={{ flexGrow: 1 }}>

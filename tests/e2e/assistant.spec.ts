@@ -5,7 +5,7 @@ test('creates and approves a campaign from a plain-language request', async ({ p
 
   await expect(page.getByRole('heading', { name: 'What would you like to market today?' })).toBeVisible();
 
-  const request = page.getByRole('textbox', { name: 'Campaign request' });
+  const request = page.getByLabel('Campaign request');
   await request.fill('Promote our Sunday brunch and get more bookings');
   await page.getByRole('button', { name: 'Send campaign request' }).click();
 
@@ -19,9 +19,10 @@ test('creates and approves a campaign from a plain-language request', async ({ p
 
 test('allows channels to be toggled without triggering other actions', async ({ page }) => {
   await page.goto('/');
-  await page.getByText('Get more bookings').click();
+  await page.getByRole('button', { name: 'Get more bookings' }).click();
+  await expect(page.getByTestId('campaign-preview')).toBeVisible();
 
-  const emailToggle = page.getByRole('checkbox', { name: 'Toggle Email' });
+  const emailToggle = page.getByLabel('Toggle Email');
   await expect(emailToggle).not.toBeChecked();
   await emailToggle.check();
   await expect(emailToggle).toBeChecked();
