@@ -21,10 +21,10 @@ export default function ResultsPage() {
             <Card key={metric.label}>
               <CardContent>
                 <Typography variant="body2" color="text.secondary">{metric.label}</Typography>
-                <Typography variant="h4" fontWeight={760} sx={{ mt: 1 }}>{metric.value}</Typography>
-                <Stack direction="row" spacing={0.5} alignItems="center" sx={{ mt: 1, color: 'success.main' }}>
+                <Typography variant="h4" sx={{ mt: 1, fontWeight: 760 }}>{metric.value}</Typography>
+                <Stack direction="row" spacing={0.5} sx={{ mt: 1, color: 'success.main', alignItems: 'center' }}>
                   <ArrowUpwardRoundedIcon fontSize="small" />
-                  <Typography variant="body2" fontWeight={700}>{metric.change}</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 700 }}>{metric.change}</Typography>
                 </Stack>
               </CardContent>
             </Card>

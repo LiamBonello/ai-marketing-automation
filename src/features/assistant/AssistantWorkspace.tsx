@@ -135,12 +135,17 @@ export function AssistantWorkspace() {
         >
           <Stack
             direction="row"
-            alignItems="center"
-            justifyContent="space-between"
-            sx={{ px: 3, py: 2.2, borderBottom: 1, borderColor: 'divider' }}
+            sx={{
+              px: 3,
+              py: 2.2,
+              borderBottom: 1,
+              borderColor: 'divider',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}
           >
             <Box>
-              <Typography fontWeight={750}>Campaign workspace</Typography>
+              <Typography sx={{ fontWeight: 750 }}>Campaign workspace</Typography>
               <Typography variant="caption" color="text.secondary">
                 Demo business
               </Typography>
@@ -167,7 +172,7 @@ export function AssistantWorkspace() {
                     borderRadius: message.role === 'user' ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
                   }}
                 >
-                  <Typography variant="body2" lineHeight={1.55}>
+                  <Typography variant="body2" sx={{ lineHeight: 1.55 }}>
                     {message.text}
                   </Typography>
                 </Paper>
@@ -175,7 +180,7 @@ export function AssistantWorkspace() {
             ))}
 
             {!showPreview && (
-              <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap" sx={{ pt: 1 }}>
+              <Stack direction="row" spacing={1} useFlexGap sx={{ pt: 1, flexWrap: 'wrap' }}>
                 {starterPrompts.map((prompt) => (
                   <Chip key={prompt} label={prompt} onClick={() => submitMessage(prompt)} clickable />
                 ))}
@@ -233,7 +238,7 @@ export function AssistantWorkspace() {
                   'radial-gradient(circle at 85% 10%, rgba(255,255,255,0.24), transparent 24%), linear-gradient(145deg, #5B4CF0 0%, #7247D8 45%, #E57373 130%)',
               }}
             >
-              <Stack direction="row" justifyContent="space-between" alignItems="center">
+              <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center' }}>
                 <Chip
                   icon={<ImageRoundedIcon />}
                   label="Creative preview"
@@ -256,7 +261,7 @@ export function AssistantWorkspace() {
             <CardContent sx={{ p: 3 }}>
               <Stack spacing={2.5}>
                 <Box>
-                  <Typography variant="caption" color="text.secondary" fontWeight={700}>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700 }}>
                     {campaign.objective.toUpperCase()}
                   </Typography>
                   <Typography variant="h6" sx={{ mt: 0.5 }}>
@@ -270,10 +275,10 @@ export function AssistantWorkspace() {
                 <Divider />
 
                 <Box>
-                  <Typography fontWeight={700} variant="body2" sx={{ mb: 1 }}>
+                  <Typography variant="body2" sx={{ mb: 1, fontWeight: 700 }}>
                     Publish to
                   </Typography>
-                  <Stack direction="row" spacing={1.5} useFlexGap flexWrap="wrap">
+                  <Stack direction="row" spacing={1.5} useFlexGap sx={{ flexWrap: 'wrap' }}>
                     {campaign.channels.map((channel) => (
                       <FormControlLabel
                         key={channel.id}
@@ -281,7 +286,7 @@ export function AssistantWorkspace() {
                           <Switch
                             checked={channel.enabled}
                             onChange={() => toggleChannel(channel.id)}
-                            inputProps={{ 'aria-label': `Toggle ${channel.label}` }}
+                            slotProps={{ input: { 'aria-label': `Toggle ${channel.label}` } }}
                           />
                         }
                         label={channel.label}
@@ -318,7 +323,7 @@ export function AssistantWorkspace() {
                     elevation={0}
                     sx={{ p: 1.5, bgcolor: 'success.50', border: 1, borderColor: 'success.100' }}
                   >
-                    <Typography variant="body2" color="success.dark" fontWeight={650}>
+                    <Typography variant="body2" color="success.dark" sx={{ fontWeight: 650 }}>
                       Campaign approved. Publishing remains disabled in this foundation build until real social accounts are connected.
                     </Typography>
                   </Paper>

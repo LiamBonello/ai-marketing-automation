@@ -41,7 +41,7 @@ export function AppShell({ children }: Readonly<{ children: React.ReactNode }>) 
 
   const drawer = (
     <Stack sx={{ height: '100%', px: 2, py: 2.5 }}>
-      <Stack direction="row" spacing={1.2} alignItems="center" sx={{ px: 1, mb: 3 }}>
+      <Stack direction="row" spacing={1.2} sx={{ px: 1, mb: 3, alignItems: 'center' }}>
         <Box
           sx={{
             width: 36,
@@ -56,7 +56,7 @@ export function AppShell({ children }: Readonly<{ children: React.ReactNode }>) 
           <AutoAwesomeRoundedIcon fontSize="small" />
         </Box>
         <Box>
-          <Typography variant="subtitle1" fontWeight={800} lineHeight={1.1}>
+          <Typography variant="subtitle1" sx={{ fontWeight: 800, lineHeight: 1.1 }}>
             MarketPilot
           </Typography>
           <Typography variant="caption" color="text.secondary">
@@ -99,7 +99,7 @@ export function AppShell({ children }: Readonly<{ children: React.ReactNode }>) 
               }}
             >
               <ListItemIcon sx={{ minWidth: 38, color: 'inherit' }}>{item.icon}</ListItemIcon>
-              <ListItemText primary={item.label} primaryTypographyProps={{ fontWeight: 650 }} />
+              <ListItemText primary={item.label} slotProps={{ primary: { sx: { fontWeight: 650 } } }} />
             </ListItemButton>
           );
         })}
@@ -107,10 +107,10 @@ export function AppShell({ children }: Readonly<{ children: React.ReactNode }>) 
 
       <Box sx={{ flexGrow: 1 }} />
       <Divider sx={{ my: 2 }} />
-      <Stack direction="row" spacing={1.2} alignItems="center" sx={{ px: 1 }}>
+      <Stack direction="row" spacing={1.2} sx={{ px: 1, alignItems: 'center' }}>
         <Avatar sx={{ width: 36, height: 36, bgcolor: 'grey.900', fontSize: 14 }}>LB</Avatar>
         <Box sx={{ minWidth: 0 }}>
-          <Typography variant="body2" fontWeight={700} noWrap>
+          <Typography variant="body2" noWrap sx={{ fontWeight: 700 }}>
             Demo business
           </Typography>
           <Typography variant="caption" color="text.secondary" noWrap>
@@ -139,7 +139,7 @@ export function AppShell({ children }: Readonly<{ children: React.ReactNode }>) 
           <IconButton edge="start" onClick={() => setMobileOpen(true)} aria-label="Open navigation">
             <MenuRoundedIcon />
           </IconButton>
-          <Typography fontWeight={800} sx={{ ml: 1 }}>
+          <Typography sx={{ ml: 1, fontWeight: 800 }}>
             MarketPilot
           </Typography>
         </Toolbar>

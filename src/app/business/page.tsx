@@ -21,15 +21,15 @@ export default function BusinessPage() {
               </Typography>
               <Divider sx={{ my: 2.5 }} />
               <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' }, gap: 2 }}>
-                <Box><Typography variant="caption" color="text.secondary">Tone</Typography><Typography fontWeight={650}>Friendly and clear</Typography></Box>
-                <Box><Typography variant="caption" color="text.secondary">Primary goal</Typography><Typography fontWeight={650}>More bookings</Typography></Box>
+                <Box><Typography variant="caption" color="text.secondary">Tone</Typography><Typography sx={{ fontWeight: 650 }}>Friendly and clear</Typography></Box>
+                <Box><Typography variant="caption" color="text.secondary">Primary goal</Typography><Typography sx={{ fontWeight: 650 }}>More bookings</Typography></Box>
               </Box>
             </CardContent>
           </Card>
 
           <Card>
             <CardContent>
-              <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={2}>
+              <Stack direction="row" spacing={2} sx={{ justifyContent: 'space-between', alignItems: 'center' }}>
                 <Box>
                   <Typography variant="h6">Connected channels</Typography>
                   <Typography variant="body2" color="text.secondary">OAuth connections will be added in the integration phase.</Typography>
@@ -38,15 +38,15 @@ export default function BusinessPage() {
               </Stack>
               <Divider sx={{ my: 2.5 }} />
               <Stack spacing={1.5}>
-                <Stack direction="row" spacing={1.5} alignItems="center"><InstagramIcon color="action" /><Typography sx={{ flexGrow: 1 }}>Instagram</Typography><Chip size="small" label="Not connected" /></Stack>
-                <Stack direction="row" spacing={1.5} alignItems="center"><MailOutlineRoundedIcon color="action" /><Typography sx={{ flexGrow: 1 }}>Email</Typography><Chip size="small" label="Not connected" /></Stack>
+                <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}><InstagramIcon color="action" /><Typography sx={{ flexGrow: 1 }}>Instagram</Typography><Chip size="small" label="Not connected" /></Stack>
+                <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}><MailOutlineRoundedIcon color="action" /><Typography sx={{ flexGrow: 1 }}>Email</Typography><Chip size="small" label="Not connected" /></Stack>
               </Stack>
             </CardContent>
           </Card>
 
           <Card>
             <CardContent>
-              <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" spacing={2}>
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ justifyContent: 'space-between' }}>
                 <Box>
                   <Typography variant="h6">Growth plan</Typography>
                   <Typography variant="body2" color="text.secondary">EUR49/month concept pricing. Billing is not active in this build.</Typography>

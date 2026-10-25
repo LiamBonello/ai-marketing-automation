@@ -21,15 +21,15 @@ export default function CampaignsPage() {
           {campaigns.map((campaign) => (
             <Card key={campaign.title}>
               <CardContent>
-                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems={{ sm: 'center' }}>
+                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ alignItems: { sm: 'center' } }}>
                   <Box sx={{ width: 44, height: 44, borderRadius: 2.5, display: 'grid', placeItems: 'center', bgcolor: 'primary.50', color: 'primary.main' }}>
                     <CampaignRoundedIcon />
                   </Box>
                   <Box sx={{ flexGrow: 1 }}>
-                    <Typography fontWeight={750}>{campaign.title}</Typography>
+                    <Typography sx={{ fontWeight: 750 }}>{campaign.title}</Typography>
                     <Typography variant="body2" color="text.secondary">{campaign.channels}</Typography>
                   </Box>
-                  <Stack alignItems={{ sm: 'flex-end' }} spacing={0.5}>
+                  <Stack spacing={0.5} sx={{ alignItems: { sm: 'flex-end' } }}>
                     <Chip size="small" label={campaign.status} variant="outlined" />
                     <Typography variant="caption" color="text.secondary">{campaign.detail}</Typography>
                   </Stack>
