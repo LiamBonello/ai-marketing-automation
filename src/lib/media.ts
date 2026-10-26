@@ -3,6 +3,7 @@ import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import type { AuthContext } from '@/lib/auth';
 import { requireEnv } from '@/lib/app-config';
+import { debitCredits } from '@/lib/credits';
 import { getDb } from '@/lib/db';
 
 const allowedTypes = new Map([
@@ -75,6 +76,81 @@ export async function putMedia(input: {
   return objectUrl(key);
 }
 
+export async function generateCampaignImage(
+  auth: AuthContext,
+  campaignId: string,
+  prompt?: string,
+): Promise<string> {
+  const campaign = await getDb().campaign.findFirst({
+    where: { id: campaignId, businessId: auth.businessId },
+    include: { business: true, versions: { orderBy: { version: 'desc' }, take: 1 } },
+  });
+  if (!campaign) throw new Error('CAMPAIGN_NOT_FOUND');
+
+  const organization = await getDb().organization.findUniqueOrThrow({
+    where: { id: auth.organizationId },
+    select: { creditBalance: true },
+  });
+  if (organization.creditBalance < 5) throw new Error('INSUFFICIENT_CREDITS');
+
+  const accountId = requireEnv('CLOUDFLARE_ACCOUNT_ID');
+  const token = requireEnv('CLOUDFLARE_AI_API_TOKEN');
+  const model = process.env.CLOUDFLARE_IMAGE_MODEL || '@cf/black-forest-labs/flux-1-schnell';
+  const latest = campaign.versions[0];
+  const imagePrompt = (prompt?.trim() || [
+    `Create a polished social media marketing image for ${campaign.business.name}.`,
+    `Campaign: ${campaign.title}.`,
+    `Objective: ${campaign.objective}.`,
+    latest?.offer ? `Offer context: ${latest.offer}.` : '',
+    campaign.business.industry ? `Industry: ${campaign.business.industry}.` : '',
+    campaign.business.brandGuidelines ? `Brand guidance: ${campaign.business.brandGuidelines}.` : '',
+    'Do not add prices, dates, claims, logos, or text that were not explicitly provided.',
+    'Use a clean commercial composition suitable for Instagram and TikTok.',
+  ].filter(Boolean).join(' ')).slice(0, 2048);
+
+  const response = await fetch(
+    `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/ai/run/${model}`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: ['Bearer', token].join(' '),
+      },
+      body: JSON.stringify({ prompt: imagePrompt, steps: 4 }),
+      cache: 'no-store',
+    },
+  );
+
+  const data = (await response.json()) as {
+    success?: boolean;
+    result?: { image?: string } | string;
+    errors?: Array<{ message?: string }>;
+  };
+  if (!response.ok || data.success === false) {
+    const message = data.errors?.map((error) => error.message).filter(Boolean).join('; ') ||
+      `Cloudflare image generation failed (${response.status}).`;
+    throw new Error(message);
+  }
+
+  const base64Image = typeof data.result === 'string' ? data.result : data.result?.image;
+  if (!base64Image) throw new Error('Cloudflare image generation returned no image.');
+
+  const mediaUrl = await putMedia({
+    businessId: auth.businessId,
+    bytes: Buffer.from(base64Image, 'base64'),
+    contentType: 'image/jpeg',
+    extension: 'jpg',
+  });
+
+  await debitCredits({
+    organizationId: auth.organizationId,
+    amount: 5,
+    reason: 'campaign_image_generation',
+    externalRef: `campaign-image:${campaign.id}:${randomUUID()}`,
+  });
+  await setCampaignMedia(auth, campaignId, mediaUrl);
+  return mediaUrl;
+}
 export async function setCampaignMedia(
   auth: AuthContext,
   campaignId: string,
