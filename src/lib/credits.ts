@@ -1,3 +1,4 @@
+import { Prisma } from '@/generated/prisma/client';
 import { getDb } from '@/lib/db';
 
 export async function debitCredits(input: {
@@ -44,7 +45,7 @@ export async function grantCredits(input: {
   amount: number;
   externalRef: string;
   type?: 'PLAN_GRANT' | 'CREDIT_PACK' | 'REFUND' | 'ADMIN_ADJUSTMENT';
-  metadata?: Record<string, unknown>;
+  metadata?: Prisma.InputJsonValue;
 }): Promise<number> {
   if (input.amount <= 0) throw new Error('Credit grant must be positive.');
 
