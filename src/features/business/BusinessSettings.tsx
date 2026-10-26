@@ -319,12 +319,15 @@ export function BusinessSettings({
             onChange={(event) => void startCheckout({ type: 'plan', plan: event.target.value })}
             disabled={demo}
           >
-            {plans.map((item) => (
+            {plans.filter((item) => item.available).map((item) => (
               <MenuItem key={item.id} value={item.id}>
                 {item.name} — EUR {item.monthlyPriceEur}/month · {item.monthlyCredits} credits
               </MenuItem>
             ))}
           </TextField>
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+            Professional and Agency plans remain unavailable until multi-business and team workflows ship.
+          </Typography>
           <Stack direction="row" spacing={1} useFlexGap sx={{ mt: 2, flexWrap: 'wrap' }}>
             <Button variant="outlined" onClick={() => void startCheckout({ type: 'credits', pack: '100' })} disabled={demo}>+100 credits</Button>
             <Button variant="outlined" onClick={() => void startCheckout({ type: 'credits', pack: '300' })} disabled={demo}>+300 credits</Button>
