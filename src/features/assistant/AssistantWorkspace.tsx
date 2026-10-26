@@ -125,11 +125,19 @@ export function AssistantWorkspace({
         ]);
         setCampaign(demoCampaign);
       } else {
+        const revising = showPreview && !campaign.id.startsWith('cmp_demo_');
+        const endpoint = revising
+          ? `/api/campaigns/${campaign.id}/revise`
+          : '/api/campaigns';
+        const payload = revising
+          ? { instruction: cleanMessage }
+          : { request: cleanMessage };
+
         const data = await readJson<{ campaign: LiveCampaignApiResponse }>(
-          await fetch('/api/campaigns', {
+          await fetch(endpoint, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ request: cleanMessage }),
+            body: JSON.stringify(payload),
           }),
         );
         setCampaign(mapLiveCampaign(data.campaign));
@@ -138,7 +146,9 @@ export function AssistantWorkspace({
           {
             id: `assistant-${current.length}`,
             role: 'assistant',
-            text: 'Your campaign is ready. Review the creative and channels, then approve it when you are satisfied.',
+            text: revising
+              ? 'I updated the current campaign and created a new version. Review it again before approving.'
+              : 'Your campaign is ready. Review the creative and channels, then approve it when you are satisfied.',
           },
         ]);
       }
