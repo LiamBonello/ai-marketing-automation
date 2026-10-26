@@ -143,7 +143,7 @@ export function TikTokSettingsDialog({
                   onChange={(event) => setTitle(event.target.value)}
                   multiline
                   minRows={3}
-                  inputProps={{ maxLength: 2200 }}
+                  slotProps={{ htmlInput: { maxLength: 2200 } }}
                   helperText={`${title.length}/2200`}
                 />
                 <FormControl fullWidth required>
