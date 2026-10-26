@@ -9,6 +9,7 @@ export interface PlanDefinition {
   monthlyPosts: number;
   monthlyCredits: number;
   stripePriceEnv: string;
+  available: boolean;
 }
 
 export const plans: readonly PlanDefinition[] = [
@@ -21,6 +22,7 @@ export const plans: readonly PlanDefinition[] = [
     monthlyPosts: 15,
     monthlyCredits: 100,
     stripePriceEnv: 'STRIPE_PRICE_STARTER',
+    available: true,
   },
   {
     id: 'growth',
@@ -31,6 +33,7 @@ export const plans: readonly PlanDefinition[] = [
     monthlyPosts: 60,
     monthlyCredits: 350,
     stripePriceEnv: 'STRIPE_PRICE_GROWTH',
+    available: true,
   },
   {
     id: 'pro',
@@ -41,6 +44,7 @@ export const plans: readonly PlanDefinition[] = [
     monthlyPosts: 200,
     monthlyCredits: 900,
     stripePriceEnv: 'STRIPE_PRICE_PRO',
+    available: false,
   },
   {
     id: 'agency',
@@ -51,6 +55,7 @@ export const plans: readonly PlanDefinition[] = [
     monthlyPosts: 600,
     monthlyCredits: 2500,
     stripePriceEnv: 'STRIPE_PRICE_AGENCY',
+    available: false,
   },
 ] as const;
 
