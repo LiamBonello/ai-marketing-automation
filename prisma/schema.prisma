@@ -79,6 +79,8 @@ model User {
   name             String
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
+  termsAcceptedAt  DateTime?
+  privacyAcceptedAt DateTime?
   sessions         Session[]
   memberships      Membership[]
   campaignsCreated Campaign[]        @relation("CampaignCreatedBy")
