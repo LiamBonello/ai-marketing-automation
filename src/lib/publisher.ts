@@ -1,7 +1,7 @@
 import { createHmac } from 'node:crypto';
 import nodemailer from 'nodemailer';
 import { appUrl, requireEnv } from '@/lib/app-config';
-import { decryptSecret, encryptSecret } from '@/lib/crypto';
+import { decryptSecret, encryptSecret, safeEqual } from '@/lib/crypto';
 import { getDb } from '@/lib/db';
 
 type Channel = 'INSTAGRAM' | 'TIKTOK' | 'X' | 'EMAIL';
@@ -383,7 +383,7 @@ function unsubscribeToken(contactId: string): string {
 }
 
 export function verifyUnsubscribeToken(contactId: string, token: string): boolean {
-  return unsubscribeToken(contactId) === token;
+  return safeEqual(unsubscribeToken(contactId), token);
 }
 
 function escapeHtml(value: string): string {
