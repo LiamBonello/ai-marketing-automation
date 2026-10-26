@@ -18,7 +18,9 @@ export async function GET() {
       mode: 'live',
       database: 'ok',
       integrations: {
-        ai: Boolean(process.env.OPENAI_API_KEY),
+        ai: Boolean(process.env.GEMINI_API_KEY),
+        aiProvider: process.env.GEMINI_API_KEY ? 'gemini' : 'not_configured',
+        aiImageGeneration: false,
         stripe: Boolean(process.env.STRIPE_SECRET_KEY && process.env.STRIPE_WEBHOOK_SECRET),
         storage: Boolean(
           process.env.S3_BUCKET &&
