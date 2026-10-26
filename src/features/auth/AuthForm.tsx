@@ -6,7 +6,9 @@ import {
   Alert,
   Box,
   Button,
+  Checkbox,
   CircularProgress,
+  FormControlLabel,
   Link,
   Paper,
   Stack,
@@ -32,6 +34,8 @@ export function AuthForm({ mode }: { mode: 'login' | 'register' }) {
           businessName: String(formData.get('businessName') || ''),
           email: String(formData.get('email') || ''),
           password: String(formData.get('password') || ''),
+          acceptTerms: formData.get('acceptTerms') === 'on',
+          acceptPrivacy: formData.get('acceptPrivacy') === 'on',
         }
       : {
           email: String(formData.get('email') || ''),
@@ -114,6 +118,26 @@ export function AuthForm({ mode }: { mode: 'login' | 'register' }) {
                 autoComplete={register ? 'new-password' : 'current-password'}
                 helperText={register ? 'Use at least 10 characters.' : undefined}
               />
+              {register && (
+                <Stack spacing={0.5}>
+                  <FormControlLabel
+                    control={<Checkbox name="acceptTerms" required />}
+                    label={
+                      <Typography variant="body2">
+                        I agree to the <Link component={NextLink} href="/terms" target="_blank">Terms of Service</Link>.
+                      </Typography>
+                    }
+                  />
+                  <FormControlLabel
+                    control={<Checkbox name="acceptPrivacy" required />}
+                    label={
+                      <Typography variant="body2">
+                        I acknowledge the <Link component={NextLink} href="/privacy" target="_blank">Privacy Notice</Link>.
+                      </Typography>
+                    }
+                  />
+                </Stack>
+              )}
               <Button type="submit" variant="contained" size="large" disabled={pending}>
                 {pending ? <CircularProgress size={22} color="inherit" /> : register ? 'Create account' : 'Sign in'}
               </Button>
