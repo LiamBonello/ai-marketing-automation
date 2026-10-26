@@ -18,32 +18,44 @@ export default async function ResultsPage() {
         { label: 'Engagements', value: '1.3K', detail: 'Likes, comments, and shares' },
       ]
     : await (async () => {
-        const aggregates = await getDb().campaignMetric.aggregate({
+        const snapshots = await getDb().campaignMetric.findMany({
           where: {
             campaign: { businessId: context.auth!.businessId },
           },
-          _sum: {
-            reach: true,
-            clicks: true,
-            engagements: true,
-          },
+          orderBy: { measuredAt: 'desc' },
+          take: 2000,
         });
+
+        const latest = new Map<string, (typeof snapshots)[number]>();
+        for (const snapshot of snapshots) {
+          const key = `${snapshot.campaignId}:${snapshot.channel}`;
+          if (!latest.has(key)) latest.set(key, snapshot);
+        }
+
+        let reach = 0;
+        let clicks = 0;
+        let engagements = 0;
+        for (const snapshot of latest.values()) {
+          reach += snapshot.reach;
+          clicks += snapshot.clicks;
+          engagements += snapshot.engagements;
+        }
 
         return [
           {
             label: 'People reached',
-            value: compactNumber(aggregates._sum.reach ?? 0),
-            detail: 'Across connected platform snapshots',
+            value: compactNumber(reach),
+            detail: 'Latest available platform snapshots',
           },
           {
             label: 'Link clicks',
-            value: compactNumber(aggregates._sum.clicks ?? 0),
-            detail: 'Tracked platform clicks',
+            value: compactNumber(clicks),
+            detail: 'Latest tracked platform clicks',
           },
           {
             label: 'Engagements',
-            value: compactNumber(aggregates._sum.engagements ?? 0),
-            detail: 'Likes, comments, and shares',
+            value: compactNumber(engagements),
+            detail: 'Latest likes, comments, and shares',
           },
         ];
       })();
