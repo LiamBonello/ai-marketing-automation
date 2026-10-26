@@ -39,6 +39,37 @@ export async function createPlanCheckout(auth: AuthContext, planId: string): Pro
   const price = configuredStripePrice(plan);
   if (!price) throw new Error(`${plan.stripePriceEnv} is not configured.`);
 
+  const current = await getDb().subscription.findUnique({
+    where: { organizationId: auth.organizationId },
+  });
+
+  if (
+    current?.stripeSubscriptionId &&
+    (current.status === 'ACTIVE' || current.status === 'TRIALING')
+  ) {
+    const stripeSubscription = await getStripe().subscriptions.retrieve(
+      current.stripeSubscriptionId,
+    );
+    const item = stripeSubscription.items.data[0];
+    if (!item) throw new Error('The current Stripe subscription has no subscription item.');
+
+    await getStripe().subscriptions.update(current.stripeSubscriptionId, {
+      items: [{ id: item.id, price }],
+      proration_behavior: 'create_prorations',
+      metadata: {
+        ...stripeSubscription.metadata,
+        organizationId: auth.organizationId,
+        plan: plan.id,
+      },
+    });
+
+    return `${appUrl()}/business?billing=updated`;
+  }
+
+  if (current?.stripeSubscriptionId && current.status === 'PAST_DUE') {
+    throw new Error('Resolve the outstanding subscription balance in the billing portal before changing plans.');
+  }
+
   const customer = await ensureCustomer(auth);
   const session = await getStripe().checkout.sessions.create({
     mode: 'subscription',
