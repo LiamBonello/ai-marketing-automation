@@ -49,12 +49,11 @@ export async function createUploadUrl(input: {
     Bucket: requireEnv('S3_BUCKET'),
     Key: key,
     ContentType: input.contentType,
-    ContentLength: input.fileSize,
   });
 
   const uploadUrl = await getSignedUrl(s3(), command, {
     expiresIn: 10 * 60,
-    signableHeaders: new Set(['content-type', 'content-length']),
+    signableHeaders: new Set(['content-type']),
   });
 
   return { uploadUrl, publicUrl: objectUrl(key), key };
