@@ -18,7 +18,7 @@ The current MVP includes:
 - Explicit campaign approval and schedule invalidation after material edits.
 - AI credits and server-side subscription entitlements.
 - Stripe hosted Checkout, credit packs, webhook synchronization, and Billing Portal.
-- S3-compatible browser uploads for user-supplied campaign media.
+- S3-compatible browser uploads plus Cloudflare Workers AI image generation.
 - Instagram, X, and TikTok OAuth connections.
 - Scheduled publishing with atomic claims, retries, audit records, and failure states.
 - TikTok per-post privacy/interactions/consent flow using current creator capabilities.
@@ -98,7 +98,7 @@ Do not reuse one secret for token encryption, cron authorization, and unsubscrib
 
 Campaign text generation uses Gemini's free developer tier by default, so it does not consume OpenAI API credits. Internal MarketPilot credits remain only as product usage controls.
 
-The free stack intentionally does not include AI image generation because current Gemini image-generation APIs do not have a free API tier. Users upload campaign media instead, which avoids unexpected AI image charges.
+Gemini's current image-generation APIs do not have a free API tier, so MarketPilot uses Cloudflare Workers AI for optional campaign images instead. Configure `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_AI_API_TOKEN`, and optionally `CLOUDFLARE_IMAGE_MODEL` (default `@cf/black-forest-labs/flux-1-schnell`). Cloudflare currently includes 10,000 Workers AI neurons per day on its Free plan; once that free allowance is exhausted, Free-plan AI calls fail rather than automatically charging overage. Users can always upload their own media instead.
 
 ### Object storage
 
