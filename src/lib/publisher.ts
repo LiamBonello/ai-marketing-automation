@@ -16,12 +16,6 @@ export type ConnectionRecord = {
   metadata: unknown;
 };
 
-function metadataRecord(value: unknown): Record<string, unknown> {
-  return value && typeof value === 'object' && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : {};
-}
-
 async function saveTokens(
   connection: ConnectionRecord,
   input: { accessToken: string; refreshToken?: string; expiresIn?: number },
@@ -236,34 +230,52 @@ async function tiktokCreatorInfo(accessToken: string) {
     },
   );
   const data = (await response.json()) as {
-    data?: { privacy_level_options?: string[] };
+    data?: {
+      privacy_level_options?: string[];
+      comment_disabled?: boolean;
+      duet_disabled?: boolean;
+      stitch_disabled?: boolean;
+    };
     error?: { code?: string; message?: string };
   };
   if (!response.ok || data.error?.code !== 'ok') {
     throw new Error(data.error?.message || `TikTok creator-info request failed (${response.status}).`);
   }
-  return data.data?.privacy_level_options || [];
+  return {
+    privacyOptions: data.data?.privacy_level_options || [],
+    commentDisabled: Boolean(data.data?.comment_disabled),
+    duetDisabled: Boolean(data.data?.duet_disabled),
+    stitchDisabled: Boolean(data.data?.stitch_disabled),
+  };
 }
 
 async function publishTikTok(
-  connection: ConnectionRecord,
   accessToken: string,
   copy: string,
   mediaUrl: string | null,
+  rawSettings: unknown,
 ): Promise<string> {
   if (!mediaUrl) throw new Error('TikTok requires an image or video.');
 
-  const privacyOptions = await tiktokCreatorInfo(accessToken);
-  const metadata = metadataRecord(connection.metadata);
-  const configuredPrivacy =
-    typeof metadata.privacyLevel === 'string' ? metadata.privacyLevel : 'PUBLIC_TO_EVERYONE';
-  const privacyLevel = privacyOptions.includes(configuredPrivacy)
-    ? configuredPrivacy
-    : privacyOptions.includes('SELF_ONLY')
-      ? 'SELF_ONLY'
-      : privacyOptions[0];
+  const settings =
+    rawSettings && typeof rawSettings === 'object' && !Array.isArray(rawSettings)
+      ? (rawSettings as Record<string, unknown>)
+      : {};
+  const privacyLevel =
+    typeof settings.privacyLevel === 'string' ? settings.privacyLevel : null;
+  const consentAt = typeof settings.consentAt === 'string' ? settings.consentAt : null;
+  if (!privacyLevel || !consentAt) {
+    throw new Error('TikTok publishing settings and explicit consent are required.');
+  }
 
-  if (!privacyLevel) throw new Error('TikTok returned no valid privacy levels.');
+  const creator = await tiktokCreatorInfo(accessToken);
+  if (!creator.privacyOptions.includes(privacyLevel)) {
+    throw new Error('The saved TikTok privacy option is no longer available. Review TikTok settings again.');
+  }
+
+  const allowComment = settings.allowComment === true && !creator.commentDisabled;
+  const allowDuet = settings.allowDuet === true && !creator.duetDisabled;
+  const allowStitch = settings.allowStitch === true && !creator.stitchDisabled;
 
   const video = isVideo(mediaUrl);
   const endpoint = video
@@ -275,9 +287,10 @@ async function publishTikTok(
         post_info: {
           title: copy.slice(0, 2200),
           privacy_level: privacyLevel,
-          disable_comment: false,
-          disable_duet: false,
-          disable_stitch: false,
+          disable_comment: !allowComment,
+          disable_duet: !allowDuet,
+          disable_stitch: !allowStitch,
+          brand_organic_toggle: true,
         },
         source_info: {
           source: 'PULL_FROM_URL',
@@ -289,7 +302,7 @@ async function publishTikTok(
           title: copy.slice(0, 90),
           description: copy.slice(0, 2200),
           privacy_level: privacyLevel,
-          disable_comment: false,
+          disable_comment: !allowComment,
           auto_add_music: true,
         },
         source_info: {
@@ -488,7 +501,7 @@ async function publishJob(jobId: string): Promise<void> {
     } else if (job.channel === 'INSTAGRAM') {
       externalId = await publishInstagram(connection, token, copy, channel.mediaUrl);
     } else {
-      externalId = await publishTikTok(connection, token, copy, channel.mediaUrl);
+      externalId = await publishTikTok(token, copy, channel.mediaUrl, channel.metadata);
     }
   }
 
