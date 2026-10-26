@@ -99,6 +99,8 @@ model Session {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   @@index([userId])
   @@index([expiresAt])
+  @@index([userId])
+  @@index([businessId])
 }
 
 model Organization {
@@ -173,7 +175,9 @@ model Campaign {
   publishJobs    PublishJob[]
   metrics        CampaignMetric[]
   @@index([businessId, createdAt])
+  @@index([createdById])
   @@index([status, scheduledFor])
+  @@index([campaignId])
 }
 
 model CampaignVersion {
@@ -191,6 +195,7 @@ model CampaignVersion {
   campaign        Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
   createdBy       User?    @relation("CampaignVersionCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
   @@unique([campaignId, version])
+  @@index([createdById])
 }
 
 model CampaignChannel {
@@ -218,6 +223,7 @@ model ApprovalEvent {
   campaign   Campaign       @relation(fields: [campaignId], references: [id], onDelete: Cascade)
   user       User           @relation(fields: [userId], references: [id], onDelete: Restrict)
   @@index([campaignId, createdAt])
+  @@index([userId])
 }
 
 model SocialConnection {
@@ -297,6 +303,7 @@ model CreditLedger {
   createdAt      DateTime        @default(now())
   organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   @@index([organizationId, createdAt])
+  @@index([actorUserId])
 }
 
 model Contact {
