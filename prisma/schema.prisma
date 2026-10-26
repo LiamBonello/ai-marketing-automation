@@ -1,0 +1,289 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+  runtime  = "nodejs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum MembershipRole { OWNER ADMIN MEMBER }
+enum CampaignStatus { DRAFT READY APPROVED SCHEDULED PUBLISHING PUBLISHED FAILED CANCELLED }
+enum ChannelType { INSTAGRAM TIKTOK X EMAIL }
+enum ConnectionStatus { READY ACTION_REQUIRED EXPIRED REVOKED ERROR }
+enum PublishJobStatus { PENDING PROCESSING SUCCEEDED FAILED CANCELLED }
+enum SubscriptionStatus { TRIALING ACTIVE PAST_DUE CANCELED UNPAID INCOMPLETE INCOMPLETE_EXPIRED PAUSED }
+enum CreditEntryType { PLAN_GRANT CREDIT_PACK AI_GENERATION REFUND ADMIN_ADJUSTMENT }
+enum ApprovalAction { APPROVED REVOKED REVISION_REQUESTED }
+enum ContactStatus { SUBSCRIBED UNSUBSCRIBED BOUNCED COMPLAINED }
+
+model User {
+  id               String            @id @default(cuid())
+  email            String            @unique
+  passwordHash     String
+  name             String
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  sessions         Session[]
+  memberships      Membership[]
+  campaignsCreated Campaign[]        @relation("CampaignCreatedBy")
+  campaignVersions CampaignVersion[] @relation("CampaignVersionCreatedBy")
+  approvalEvents   ApprovalEvent[]
+  oauthStates      OAuthState[]
+  auditEvents      AuditEvent[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model Organization {
+  id               String         @id @default(cuid())
+  name             String
+  slug             String         @unique
+  stripeCustomerId String?        @unique
+  creditBalance    Int            @default(0)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  memberships      Membership[]
+  businesses       Business[]
+  subscription     Subscription?
+  creditEntries    CreditLedger[]
+  auditEvents      AuditEvent[]
+}
+
+model Membership {
+  id             String         @id @default(cuid())
+  organizationId String
+  userId         String
+  role           MembershipRole @default(MEMBER)
+  createdAt      DateTime       @default(now())
+  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([organizationId, userId])
+  @@index([userId])
+}
+
+model Business {
+  id                String             @id @default(cuid())
+  organizationId    String
+  name              String
+  website           String?
+  description       String?
+  industry          String?
+  tone              String?
+  targetAudience    String?
+  location          String?
+  primaryGoal       String?
+  brandGuidelines   String?
+  timezone          String             @default("Europe/Malta")
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  organization      Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  campaigns         Campaign[]
+  socialConnections SocialConnection[]
+  contacts          Contact[]
+  oauthStates       OAuthState[]
+  @@index([organizationId])
+}
+
+model Campaign {
+  id             String         @id @default(cuid())
+  businessId     String
+  createdById    String
+  title          String
+  objective      String
+  status         CampaignStatus @default(DRAFT)
+  version        Int            @default(1)
+  approvedAt     DateTime?
+  scheduledFor   DateTime?
+  publishedAt    DateTime?
+  lastError      String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  business       Business       @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  createdBy      User           @relation("CampaignCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  versions       CampaignVersion[]
+  channels       CampaignChannel[]
+  approvalEvents ApprovalEvent[]
+  publishJobs    PublishJob[]
+  metrics        CampaignMetric[]
+  @@index([businessId, createdAt])
+  @@index([status, scheduledFor])
+}
+
+model CampaignVersion {
+  id              String   @id @default(cuid())
+  campaignId      String
+  createdById     String?
+  version         Int
+  caption         String
+  offer           String?
+  callToAction    String?
+  channelVariants Json?
+  generationInput String?
+  generatedBy     String?
+  createdAt       DateTime @default(now())
+  campaign        Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  createdBy       User?    @relation("CampaignVersionCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  @@unique([campaignId, version])
+}
+
+model CampaignChannel {
+  id             String      @id @default(cuid())
+  campaignId     String
+  channel        ChannelType
+  enabled        Boolean     @default(true)
+  variantCopy    String?
+  subject        String?
+  mediaUrl       String?
+  externalPostId String?
+  metadata       Json?
+  campaign       Campaign    @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  @@unique([campaignId, channel])
+  @@index([channel])
+}
+
+model ApprovalEvent {
+  id         String         @id @default(cuid())
+  campaignId String
+  userId     String
+  action     ApprovalAction
+  metadata   Json?
+  createdAt  DateTime       @default(now())
+  campaign   Campaign       @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  user       User           @relation(fields: [userId], references: [id], onDelete: Restrict)
+  @@index([campaignId, createdAt])
+}
+
+model SocialConnection {
+  id                    String           @id @default(cuid())
+  businessId            String
+  channel               ChannelType
+  externalAccountId     String
+  displayName           String?
+  accessTokenEncrypted  String
+  refreshTokenEncrypted String?
+  tokenExpiresAt        DateTime?
+  scopes                String?
+  status                ConnectionStatus @default(READY)
+  metadata              Json?
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+  business              Business         @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  @@unique([businessId, channel])
+  @@index([status])
+}
+
+model OAuthState {
+  id                    String   @id @default(cuid())
+  provider              String
+  stateHash             String   @unique
+  codeVerifierEncrypted String?
+  userId                String
+  businessId            String
+  expiresAt             DateTime
+  metadata              Json?
+  createdAt             DateTime @default(now())
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  business              Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  @@index([expiresAt])
+}
+
+model PublishJob {
+  id             String           @id @default(cuid())
+  campaignId     String
+  channel        ChannelType
+  scheduledFor   DateTime
+  status         PublishJobStatus @default(PENDING)
+  attempts       Int              @default(0)
+  lastError      String?
+  idempotencyKey String           @unique
+  externalId     String?
+  startedAt      DateTime?
+  completedAt    DateTime?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  campaign       Campaign         @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  @@index([status, scheduledFor])
+}
+
+model Subscription {
+  id                   String             @id @default(cuid())
+  organizationId       String             @unique
+  plan                 String             @default("starter")
+  status               SubscriptionStatus @default(INCOMPLETE)
+  stripeSubscriptionId String?            @unique
+  stripePriceId        String?
+  currentPeriodEnd     DateTime?
+  cancelAtPeriodEnd    Boolean            @default(false)
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+  organization         Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+}
+
+model CreditLedger {
+  id             String          @id @default(cuid())
+  organizationId String
+  type           CreditEntryType
+  amount         Int
+  balanceAfter   Int
+  externalRef    String?         @unique
+  metadata       Json?
+  createdAt      DateTime        @default(now())
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  @@index([organizationId, createdAt])
+}
+
+model Contact {
+  id             String        @id @default(cuid())
+  businessId     String
+  email          String
+  firstName      String?
+  lastName       String?
+  status         ContactStatus @default(SUBSCRIBED)
+  consentSource  String?
+  consentAt      DateTime?
+  unsubscribedAt DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  business       Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  @@unique([businessId, email])
+  @@index([businessId, status])
+}
+
+model CampaignMetric {
+  id          String      @id @default(cuid())
+  campaignId  String
+  channel     ChannelType
+  impressions Int         @default(0)
+  reach       Int         @default(0)
+  clicks      Int         @default(0)
+  engagements Int         @default(0)
+  spendCents  Int         @default(0)
+  measuredAt  DateTime    @default(now())
+  campaign    Campaign    @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  @@index([campaignId, measuredAt])
+}
+
+model AuditEvent {
+  id             String       @id @default(cuid())
+  organizationId String
+  actorUserId    String?
+  action         String
+  entityType     String
+  entityId       String?
+  metadata       Json?
+  createdAt      DateTime     @default(now())
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  actorUser      User?        @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+  @@index([organizationId, createdAt])
+}
