@@ -131,12 +131,12 @@ Configure:
 
 Plans currently modeled in the application:
 
-| Plan | Price | Businesses | Channels | Monthly posts | Monthly credits |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| Starter | EUR 19 | 1 | 2 | 15 | 100 |
-| Growth | EUR 49 | 1 | 4 | 60 | 350 |
-| Professional | EUR 99 | 3 | 12 | 200 | 900 |
-| Agency | EUR 249 | 10 | 40 | 600 | 2500 |
+| Plan | Price | Businesses | Channels | Monthly posts | Monthly credits | MVP status |
+| --- | ---: | ---: | ---: | ---: | ---: | --- |
+| Starter | EUR 19 | 1 | 2 | 15 | 100 | Available |
+| Growth | EUR 49 | 1 | 4 | 60 | 350 | Available |
+| Professional | EUR 99 | 3 | 12 | 200 | 900 | Defined, checkout disabled |
+| Agency | EUR 249 | 10 | 40 | 600 | 2500 | Defined, checkout disabled |
 
 Point Stripe webhooks to:
 
@@ -151,6 +151,8 @@ Subscribe at minimum to:
 - `customer.subscription.updated`
 - `customer.subscription.deleted`
 - `invoice.paid`
+
+New accounts receive a seven-day Starter trial with 100 AI credits. Publishing is blocked after the trial expires until a paid subscription becomes active.
 
 Credit grants are idempotent by Stripe invoice/Checkout identifier.
 
