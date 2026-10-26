@@ -70,6 +70,14 @@ DATABASE_SCHEMA=marketpilot
 
 Keep the database password server-side.
 
+## Supabase schema security
+
+MarketPilot is stored in the dedicated `marketpilot` schema. The Supabase `anon` and `authenticated` roles currently have no `USAGE` privilege on that schema, and the application accesses it through the server-side Prisma PostgreSQL connection.
+
+Supabase's database advisor still reports that RLS is disabled on the MarketPilot tables. Do not expose `marketpilot` in the Supabase Data API unless you first enable RLS and create policies appropriate to the application's organization/business authorization model.
+
+The unrelated pre-existing `public` schema has its own advisor findings and should be reviewed separately before that older application is exposed publicly.
+
 ## 4. Supabase media storage
 
 The bucket already exists:
