@@ -301,6 +301,10 @@ export async function approveCampaign(auth: AuthContext, campaignId: string) {
     include: { channels: true },
   });
   if (!campaign) throw new Error('CAMPAIGN_NOT_FOUND');
+  if (campaign.status === 'APPROVED') return campaign;
+  if (campaign.status === 'SCHEDULED' || campaign.status === 'PUBLISHING' || campaign.status === 'PUBLISHED') {
+    throw new Error('A scheduled or published campaign cannot be approved again.');
+  }
   if (!campaign.channels.some((channel) => channel.enabled)) {
     throw new Error('Enable at least one channel before approval.');
   }
