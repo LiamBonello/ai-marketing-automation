@@ -6,7 +6,7 @@ import { getDb } from '@/lib/db';
 
 type Channel = 'INSTAGRAM' | 'TIKTOK' | 'X' | 'EMAIL';
 
-type ConnectionRecord = {
+export type ConnectionRecord = {
   id: string;
   channel: Channel;
   externalAccountId: string;
@@ -41,7 +41,7 @@ async function saveTokens(
   });
 }
 
-async function validAccessToken(connection: ConnectionRecord): Promise<string> {
+export async function validAccessToken(connection: ConnectionRecord): Promise<string> {
   const accessToken = decryptSecret(connection.accessTokenEncrypted);
   if (!connection.tokenExpiresAt || connection.tokenExpiresAt.getTime() > Date.now() + 5 * 60 * 1000) {
     return accessToken;
