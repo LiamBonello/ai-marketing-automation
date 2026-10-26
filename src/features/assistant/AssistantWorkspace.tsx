@@ -266,6 +266,30 @@ export function AssistantWorkspace({
     }
   }
 
+  async function generateImage() {
+    if (mode === 'demo' || pendingAction) return;
+    setPendingAction('image');
+    setError(null);
+    try {
+      const data = await readJson<{ mediaUrl: string }>(
+        await fetch(`/api/campaigns/${campaign.id}/media`, { method: 'POST' }),
+      );
+      setCampaign((current) => ({
+        ...current,
+        status: 'ready',
+        channels: current.channels.map((channel) =>
+          channel.id === 'instagram' || channel.id === 'tiktok'
+            ? { ...channel, mediaUrl: data.mediaUrl }
+            : channel,
+        ),
+      }));
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Image generation failed.');
+    } finally {
+      setPendingAction(null);
+    }
+  }
+
   async function uploadMedia(file: File) {
     if (mode === 'demo' || pendingAction) return;
     setPendingAction('upload');
@@ -537,25 +561,36 @@ export function AssistantWorkspace({
                         }
                       />
                     )}
-                    <Button
-                      fullWidth
-                      component="label"
-                      variant="outlined"
-                      startIcon={<UploadRoundedIcon />}
-                      disabled={Boolean(pendingAction)}
-                    >
-                      {pendingAction === 'upload' ? 'Uploading...' : 'Upload media'}
-                      <input
-                        hidden
-                        type="file"
-                        accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime,video/webm"
-                        onChange={(event) => {
-                          const file = event.target.files?.[0];
-                          if (file) void uploadMedia(file);
-                          event.target.value = '';
-                        }}
-                      />
-                    </Button>
+                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+                      <Button
+                        fullWidth
+                        variant="outlined"
+                        startIcon={<AutoAwesomeRoundedIcon />}
+                        disabled={Boolean(pendingAction)}
+                        onClick={() => void generateImage()}
+                      >
+                        {pendingAction === 'image' ? 'Generating...' : 'Generate image'}
+                      </Button>
+                      <Button
+                        fullWidth
+                        component="label"
+                        variant="outlined"
+                        startIcon={<UploadRoundedIcon />}
+                        disabled={Boolean(pendingAction)}
+                      >
+                        {pendingAction === 'upload' ? 'Uploading...' : 'Upload media'}
+                        <input
+                          hidden
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime,video/webm"
+                          onChange={(event) => {
+                            const file = event.target.files?.[0];
+                            if (file) void uploadMedia(file);
+                            event.target.value = '';
+                          }}
+                        />
+                      </Button>
+                    </Stack>
                   </Stack>
                 )}
 
