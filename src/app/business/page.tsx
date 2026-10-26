@@ -1,61 +1,96 @@
-import InstagramIcon from '@mui/icons-material/Instagram';
-import MailOutlineRoundedIcon from '@mui/icons-material/MailOutlineRounded';
-import { Box, Button, Card, CardContent, Chip, Container, Divider, Stack, Typography } from '@mui/material';
+import { Container, Stack, Typography } from '@mui/material';
 import { AppShell } from '@/components/layout/AppShell';
+import { BusinessSettings } from '@/features/business/BusinessSettings';
+import { getDb } from '@/lib/db';
+import { requirePageContext } from '@/lib/page-context';
 
-export default function BusinessPage() {
+export default async function BusinessPage() {
+  const context = await requirePageContext();
+
+  const data = context.demo
+    ? {
+        business: {
+          name: 'Demo business',
+          website: 'https://example.com',
+          description: 'A demo hospitality business used for MarketPilot browser tests.',
+          industry: 'Hospitality',
+          tone: 'Friendly and clear',
+          targetAudience: 'Local diners and weekend visitors',
+          location: 'Malta',
+          primaryGoal: 'More bookings',
+          brandGuidelines: null,
+          timezone: 'Europe/Malta',
+        },
+        connections: [],
+        plan: 'growth',
+        subscriptionStatus: 'ACTIVE',
+        creditBalance: 350,
+      }
+    : await (async () => {
+        const business = await getDb().business.findFirstOrThrow({
+          where: {
+            id: context.auth!.businessId,
+            organizationId: context.auth!.organizationId,
+          },
+          include: {
+            socialConnections: {
+              select: {
+                channel: true,
+                displayName: true,
+                status: true,
+              },
+            },
+          },
+        });
+
+        const organization = await getDb().organization.findUniqueOrThrow({
+          where: { id: context.auth!.organizationId },
+          select: {
+            creditBalance: true,
+            subscription: {
+              select: { plan: true, status: true },
+            },
+          },
+        });
+
+        return {
+          business: {
+            name: business.name,
+            website: business.website,
+            description: business.description,
+            industry: business.industry,
+            tone: business.tone,
+            targetAudience: business.targetAudience,
+            location: business.location,
+            primaryGoal: business.primaryGoal,
+            brandGuidelines: business.brandGuidelines,
+            timezone: business.timezone,
+          },
+          connections: business.socialConnections,
+          plan: organization.subscription?.plan ?? 'starter',
+          subscriptionStatus: organization.subscription?.status ?? 'INCOMPLETE',
+          creditBalance: organization.creditBalance,
+        };
+      })();
+
   return (
-    <AppShell>
+    <AppShell identity={context.identity} demo={context.demo}>
       <Container maxWidth="lg" sx={{ py: { xs: 2, md: 5 }, px: { xs: 2, sm: 3, lg: 5 } }}>
         <Stack spacing={1} sx={{ mb: 4 }}>
           <Typography variant="h2">My business</Typography>
-          <Typography color="text.secondary">Brand context, connected channels, and subscription settings live here.</Typography>
+          <Typography color="text.secondary">
+            Brand context, connected channels, consented contacts, subscription, and credits.
+          </Typography>
         </Stack>
 
-        <Stack spacing={3}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6">Brand profile</Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                Demo business profile used by the assistant during the foundation build.
-              </Typography>
-              <Divider sx={{ my: 2.5 }} />
-              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' }, gap: 2 }}>
-                <Box><Typography variant="caption" color="text.secondary">Tone</Typography><Typography sx={{ fontWeight: 650 }}>Friendly and clear</Typography></Box>
-                <Box><Typography variant="caption" color="text.secondary">Primary goal</Typography><Typography sx={{ fontWeight: 650 }}>More bookings</Typography></Box>
-              </Box>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent>
-              <Stack direction="row" spacing={2} sx={{ justifyContent: 'space-between', alignItems: 'center' }}>
-                <Box>
-                  <Typography variant="h6">Connected channels</Typography>
-                  <Typography variant="body2" color="text.secondary">OAuth connections will be added in the integration phase.</Typography>
-                </Box>
-                <Button variant="outlined">Connect channel</Button>
-              </Stack>
-              <Divider sx={{ my: 2.5 }} />
-              <Stack spacing={1.5}>
-                <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}><InstagramIcon color="action" /><Typography sx={{ flexGrow: 1 }}>Instagram</Typography><Chip size="small" label="Not connected" /></Stack>
-                <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}><MailOutlineRoundedIcon color="action" /><Typography sx={{ flexGrow: 1 }}>Email</Typography><Chip size="small" label="Not connected" /></Stack>
-              </Stack>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent>
-              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ justifyContent: 'space-between' }}>
-                <Box>
-                  <Typography variant="h6">Growth plan</Typography>
-                  <Typography variant="body2" color="text.secondary">EUR49/month concept pricing. Billing is not active in this build.</Typography>
-                </Box>
-                <Button variant="contained">Manage plan</Button>
-              </Stack>
-            </CardContent>
-          </Card>
-        </Stack>
+        <BusinessSettings
+          demo={context.demo}
+          business={data.business}
+          connections={data.connections}
+          plan={data.plan}
+          subscriptionStatus={data.subscriptionStatus}
+          creditBalance={data.creditBalance}
+        />
       </Container>
     </AppShell>
   );
