@@ -12,7 +12,11 @@ export function getDb(): PrismaClient {
   }
 
   const adapter = new PrismaPg(
-    { connectionString },
+    {
+      connectionString,
+      max: 1,
+      ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : undefined,
+    },
     { schema: process.env.DATABASE_SCHEMA || 'public' },
   );
   const client = new PrismaClient({ adapter });
