@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { Prisma } from '@/generated/prisma/client';
 import type { AuthContext } from '@/lib/auth';
 import { appUrl, requireEnv } from '@/lib/app-config';
 import { decryptSecret, encryptSecret, secureToken, sha256 } from '@/lib/crypto';
@@ -87,7 +88,7 @@ interface TokenResult {
   scopes?: string;
   externalAccountId: string;
   displayName?: string;
-  metadata?: Record<string, unknown>;
+  metadata?: Prisma.InputJsonValue;
 }
 
 async function exchangeInstagram(code: string): Promise<TokenResult> {
