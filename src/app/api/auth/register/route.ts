@@ -11,6 +11,8 @@ const schema = z.object({
   email: z.string().trim().toLowerCase().email().max(254),
   password: z.string().min(10).max(128),
   businessName: z.string().trim().min(2).max(160),
+  acceptTerms: z.literal(true),
+  acceptPrivacy: z.literal(true),
 });
 
 export async function POST(request: Request) {
@@ -26,7 +28,13 @@ export async function POST(request: Request) {
 
     const user = await db.$transaction(async (tx) => {
       const createdUser = await tx.user.create({
-        data: { name: input.name, email: input.email, passwordHash },
+        data: {
+          name: input.name,
+          email: input.email,
+          passwordHash,
+          termsAcceptedAt: new Date(),
+          privacyAcceptedAt: new Date(),
+        },
       });
 
       const organization = await tx.organization.create({
