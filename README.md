@@ -13,12 +13,12 @@ The current MVP includes:
 - Email/password authentication with HTTP-only server sessions.
 - AES-256-GCM encryption for social access and refresh tokens.
 - Business/brand profile used as confirmed AI context.
-- OpenAI Responses API text generation with Zod validation.
+- Gemini 3.8 Flash text generation with Zod validation on Google's free developer tier.
 - Immutable campaign versions and conversational revisions.
 - Explicit campaign approval and schedule invalidation after material edits.
 - AI credits and server-side subscription entitlements.
 - Stripe hosted Checkout, credit packs, webhook synchronization, and Billing Portal.
-- S3-compatible browser uploads and AI-generated campaign images.
+- S3-compatible browser uploads for user-supplied campaign media.
 - Instagram, X, and TikTok OAuth connections.
 - Scheduled publishing with atomic claims, retries, audit records, and failure states.
 - TikTok per-post privacy/interactions/consent flow using current creator capabilities.
@@ -90,13 +90,15 @@ openssl rand -base64 32
 
 Do not reuse one secret for token encryption, cron authorization, and unsubscribe links.
 
-### OpenAI
+### Gemini AI
 
-- `OPENAI_API_KEY`
-- `OPENAI_MODEL`
-- `OPENAI_IMAGE_MODEL`
+- `GEMINI_API_KEY`
+- `GEMINI_MODEL` (default: `gemini-3.8-flash`)
+- `GEMINI_FALLBACK_MODEL` (default: `gemini-3.1-flash-lite`)
 
-Text generation costs one internal MarketPilot credit. Image generation currently costs five internal credits. These are application usage units, not payment-provider balances.
+Campaign text generation uses Gemini's free developer tier by default, so it does not consume OpenAI API credits. Internal MarketPilot credits remain only as product usage controls.
+
+The free stack intentionally does not include AI image generation because current Gemini image-generation APIs do not have a free API tier. Users upload campaign media instead, which avoids unexpected AI image charges.
 
 ### Object storage
 
