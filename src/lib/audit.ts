@@ -1,3 +1,4 @@
+import { Prisma } from '@/generated/prisma/client';
 import { getDb } from '@/lib/db';
 
 export async function audit(input: {
@@ -6,7 +7,7 @@ export async function audit(input: {
   action: string;
   entityType: string;
   entityId?: string;
-  metadata?: Record<string, unknown>;
+  metadata?: Prisma.InputJsonValue;
 }): Promise<void> {
   await getDb().auditEvent.create({
     data: {
