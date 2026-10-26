@@ -6,6 +6,7 @@ export async function assertSchedulingEntitlement(
   auth: AuthContext,
   enabledChannelCount: number,
   scheduledFor: Date,
+  excludeCampaignId?: string,
 ): Promise<void> {
   const organization = await getDb().organization.findUniqueOrThrow({
     where: { id: auth.organizationId },
@@ -46,6 +47,7 @@ export async function assertSchedulingEntitlement(
         business: { organizationId: auth.organizationId },
       },
       status: { not: 'CANCELLED' },
+      campaignId: excludeCampaignId ? { not: excludeCampaignId } : undefined,
       scheduledFor: { gte: monthStart, lt: nextMonth },
     },
   });
