@@ -53,7 +53,11 @@ export async function POST(request: Request) {
             },
           },
           subscription: {
-            create: { plan: 'starter', status: 'TRIALING' },
+            create: {
+              plan: 'starter',
+              status: 'TRIALING',
+              currentPeriodEnd: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+            },
           },
         },
       });
