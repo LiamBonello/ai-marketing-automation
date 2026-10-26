@@ -32,6 +32,7 @@ import {
 } from '@mui/material';
 import type { CampaignPreview, MarketingChannel } from '@/domain/campaign';
 import { demoCampaignResponse } from '@/data/demoCampaign';
+import { TikTokSettingsDialog } from '@/features/assistant/TikTokSettingsDialog';
 import {
   mapCampaignResponse,
   mapLiveCampaign,
@@ -525,7 +526,22 @@ export function AssistantWorkspace({
                 </Box>
 
                 {mode === 'live' && (
-                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+                  <Stack spacing={1}>
+                    {campaign.channels.some((channel) => channel.id === 'tiktok' && channel.enabled) && (
+                      <TikTokSettingsDialog
+                        campaignId={campaign.id}
+                        disabled={Boolean(pendingAction)}
+                        onSaved={() =>
+                          setCampaign((current) => ({
+                            ...current,
+                            status: 'ready',
+                            approvedAt: null,
+                            scheduledFor: null,
+                          }))
+                        }
+                      />
+                    )}
+                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
                     <Button
                       fullWidth
                       variant="outlined"
@@ -554,6 +570,7 @@ export function AssistantWorkspace({
                         }}
                       />
                     </Button>
+                    </Stack>
                   </Stack>
                 )}
 
