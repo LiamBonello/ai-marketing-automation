@@ -9,3 +9,7 @@ test-results
 .env.*.local
 .DS_Store
 npm-debug.log*
+
+.env.production
+.env.development
+.env.test
