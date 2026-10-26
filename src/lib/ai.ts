@@ -187,7 +187,7 @@ export async function generateCampaignDraft(
   }
 
   const primaryModel = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
-  const fallbackModel = process.env.GEMINI_FALLBACK_MODEL || 'gemini-3.1-flash-lite';
+  const fallbackModel = process.env.GEMINI_FALLBACK_MODEL || 'gemini-3.5-flash-lite';
 
   try {
     return {
