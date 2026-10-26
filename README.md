@@ -94,7 +94,7 @@ Do not reuse one secret for token encryption, cron authorization, and unsubscrib
 
 - `GEMINI_API_KEY`
 - `GEMINI_MODEL` (default: `gemini-3.8-flash`)
-- `GEMINI_FALLBACK_MODEL` (default: `gemini-3.1-flash-lite`)
+- `GEMINI_FALLBACK_MODEL` (default: `gemini-3.5-flash-lite`)
 
 Campaign text generation uses Gemini's free developer tier by default, so it does not consume OpenAI API credits. Internal MarketPilot credits remain only as product usage controls.
 
