@@ -4,6 +4,7 @@ import { debitCredits } from '@/lib/credits';
 import { getDb } from '@/lib/db';
 import { generateCampaignDraft } from '@/lib/ai';
 import { assertSchedulingEntitlement } from '@/lib/entitlements';
+import { assertPublishingReadiness } from '@/lib/readiness';
 
 export async function generateAndCreateCampaign(auth: AuthContext, request: string) {
   const cleanRequest = request.trim();
@@ -209,11 +210,13 @@ export async function reviseCampaign(
           enabled: channel.enabled,
           variantCopy: channel.copy,
           subject: channel.subject,
+          metadata: channel.channel === 'TIKTOK' ? {} : undefined,
         },
         update: {
           enabled: channel.enabled,
           variantCopy: channel.copy,
           subject: channel.subject,
+          metadata: channel.channel === 'TIKTOK' ? {} : undefined,
         },
       });
     }
@@ -355,6 +358,7 @@ export async function scheduleCampaign(
   if (enabledChannels.length === 0) throw new Error('No channels are enabled.');
 
   await assertSchedulingEntitlement(auth, enabledChannels.length, scheduledFor);
+  await assertPublishingReadiness(auth, enabledChannels);
 
   await getDb().$transaction(async (tx) => {
     await tx.publishJob.updateMany({
