@@ -12,6 +12,7 @@ const generateSchema = z.object({
   prompt: z.string().trim().max(2000).optional(),
 });
 
+
 export async function PATCH(
   request: Request,
   context: { params: Promise<{ id: string }> },

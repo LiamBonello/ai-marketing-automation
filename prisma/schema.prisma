@@ -173,6 +173,7 @@ model Campaign {
   publishJobs    PublishJob[]
   metrics        CampaignMetric[]
   @@index([businessId, createdAt])
+  @@index([createdById])
   @@index([status, scheduledFor])
 }
 
@@ -191,6 +192,7 @@ model CampaignVersion {
   campaign        Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
   createdBy       User?    @relation("CampaignVersionCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
   @@unique([campaignId, version])
+  @@index([createdById])
 }
 
 model CampaignChannel {
@@ -218,6 +220,7 @@ model ApprovalEvent {
   campaign   Campaign       @relation(fields: [campaignId], references: [id], onDelete: Cascade)
   user       User           @relation(fields: [userId], references: [id], onDelete: Restrict)
   @@index([campaignId, createdAt])
+  @@index([userId])
 }
 
 model SocialConnection {
@@ -252,6 +255,8 @@ model OAuthState {
   user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   business              Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
   @@index([expiresAt])
+  @@index([userId])
+  @@index([businessId])
 }
 
 model PublishJob {
@@ -270,6 +275,7 @@ model PublishJob {
   updatedAt      DateTime         @updatedAt
   campaign       Campaign         @relation(fields: [campaignId], references: [id], onDelete: Cascade)
   @@index([status, scheduledFor])
+  @@index([campaignId])
 }
 
 model Subscription {
@@ -342,4 +348,5 @@ model AuditEvent {
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   actorUser      User?        @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
   @@index([organizationId, createdAt])
+  @@index([actorUserId])
 }

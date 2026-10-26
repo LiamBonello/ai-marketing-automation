@@ -13,12 +13,12 @@ The current MVP includes:
 - Email/password authentication with HTTP-only server sessions.
 - AES-256-GCM encryption for social access and refresh tokens.
 - Business/brand profile used as confirmed AI context.
-- OpenAI Responses API text generation with Zod validation.
+- Gemini 3.8 Flash text generation with Zod validation on Google's free developer tier.
 - Immutable campaign versions and conversational revisions.
 - Explicit campaign approval and schedule invalidation after material edits.
 - AI credits and server-side subscription entitlements.
 - Stripe hosted Checkout, credit packs, webhook synchronization, and Billing Portal.
-- S3-compatible browser uploads and AI-generated campaign images.
+- S3-compatible browser uploads plus Cloudflare Workers AI image generation.
 - Instagram, X, and TikTok OAuth connections.
 - Scheduled publishing with atomic claims, retries, audit records, and failure states.
 - TikTok per-post privacy/interactions/consent flow using current creator capabilities.
@@ -44,6 +44,8 @@ The app is a modular monolith:
 - `tests/e2e`: cross-browser user journeys.
 
 External provider values remain server-side. No provider secret should use a `NEXT_PUBLIC_` prefix.
+
+For the zero-fixed-cost deployment path, follow [`FREE_STACK_SETUP.md`](./FREE_STACK_SETUP.md).
 
 ## Local setup
 
@@ -90,13 +92,15 @@ openssl rand -base64 32
 
 Do not reuse one secret for token encryption, cron authorization, and unsubscribe links.
 
-### OpenAI
+### Gemini AI
 
-- `OPENAI_API_KEY`
-- `OPENAI_MODEL`
-- `OPENAI_IMAGE_MODEL`
+- `GEMINI_API_KEY`
+- `GEMINI_MODEL` (default: `gemini-3.8-flash`)
+- `GEMINI_FALLBACK_MODEL` (default: `gemini-3.5-flash-lite`)
 
-Text generation costs one internal MarketPilot credit. Image generation currently costs five internal credits. These are application usage units, not payment-provider balances.
+Campaign text generation uses Gemini's free developer tier by default, so it does not consume OpenAI API credits. Internal MarketPilot credits remain only as product usage controls.
+
+Gemini's current image-generation APIs do not have a free API tier, so MarketPilot uses Cloudflare Workers AI for optional campaign images instead. Configure `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_AI_API_TOKEN`, and optionally `CLOUDFLARE_IMAGE_MODEL` (default `@cf/black-forest-labs/flux-1-schnell`). Cloudflare currently includes 10,000 Workers AI neurons per day on its Free plan; once that free allowance is exhausted, Free-plan AI calls fail rather than automatically charging overage. Users can always upload their own media instead.
 
 ### Object storage
 

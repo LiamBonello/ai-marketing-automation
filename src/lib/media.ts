@@ -1,7 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import OpenAI from 'openai';
 import type { AuthContext } from '@/lib/auth';
 import { requireEnv } from '@/lib/app-config';
 import { debitCredits } from '@/lib/credits';
@@ -40,8 +39,8 @@ export async function createUploadUrl(input: {
 }): Promise<{ uploadUrl: string; publicUrl: string; key: string }> {
   const extension = allowedTypes.get(input.contentType);
   if (!extension) throw new Error('Unsupported media type.');
-  if (!Number.isFinite(input.fileSize) || input.fileSize <= 0 || input.fileSize > 250 * 1024 * 1024) {
-    throw new Error('Media must be between 1 byte and 250 MB.');
+  if (!Number.isFinite(input.fileSize) || input.fileSize <= 0 || input.fileSize > 50 * 1024 * 1024) {
+    throw new Error('Media must be between 1 byte and 50 MB on the free storage tier.');
   }
 
   const key = `businesses/${input.auth.businessId}/uploads/${Date.now()}-${randomUUID()}.${extension}`;
@@ -84,10 +83,7 @@ export async function generateCampaignImage(
 ): Promise<string> {
   const campaign = await getDb().campaign.findFirst({
     where: { id: campaignId, businessId: auth.businessId },
-    include: {
-      business: true,
-      versions: { orderBy: { version: 'desc' }, take: 1 },
-    },
+    include: { business: true, versions: { orderBy: { version: 'desc' }, take: 1 } },
   });
   if (!campaign) throw new Error('CAMPAIGN_NOT_FOUND');
 
@@ -96,47 +92,62 @@ export async function generateCampaignImage(
     select: { creditBalance: true },
   });
   if (organization.creditBalance < 5) throw new Error('INSUFFICIENT_CREDITS');
-  if (!process.env.OPENAI_API_KEY) throw new Error('OPENAI_API_KEY is not configured.');
 
+  const accountId = requireEnv('CLOUDFLARE_ACCOUNT_ID');
+  const token = requireEnv('CLOUDFLARE_AI_API_TOKEN');
+  const model = process.env.CLOUDFLARE_IMAGE_MODEL || '@cf/black-forest-labs/flux-1-schnell';
   const latest = campaign.versions[0];
-  const imagePrompt =
-    prompt?.trim() ||
-    [
-      `Create a polished social media marketing image for ${campaign.business.name}.`,
-      `Campaign: ${campaign.title}.`,
-      `Objective: ${campaign.objective}.`,
-      latest?.offer ? `Offer context: ${latest.offer}.` : '',
-      campaign.business.industry ? `Industry: ${campaign.business.industry}.` : '',
-      campaign.business.brandGuidelines ? `Brand guidance: ${campaign.business.brandGuidelines}.` : '',
-      'Do not add prices, dates, claims, logos, or text that were not explicitly provided. Prefer a clean commercial composition suitable for Instagram.',
-    ].filter(Boolean).join(' ');
+  const imagePrompt = (prompt?.trim() || [
+    `Create a polished social media marketing image for ${campaign.business.name}.`,
+    `Campaign: ${campaign.title}.`,
+    `Objective: ${campaign.objective}.`,
+    latest?.offer ? `Offer context: ${latest.offer}.` : '',
+    campaign.business.industry ? `Industry: ${campaign.business.industry}.` : '',
+    campaign.business.brandGuidelines ? `Brand guidance: ${campaign.business.brandGuidelines}.` : '',
+    'Do not add prices, dates, claims, logos, or text that were not explicitly provided.',
+    'Use a clean commercial composition suitable for Instagram and TikTok.',
+  ].filter(Boolean).join(' ')).slice(0, 2048);
 
-  const client = new OpenAI({ apiKey: requireEnv('OPENAI_API_KEY') });
-  const response = await client.responses.create({
-    model: process.env.OPENAI_MODEL || 'gpt-6-luna',
-    input: imagePrompt,
-    tools: [
-      {
-        type: 'image_generation',
-        model: process.env.OPENAI_IMAGE_MODEL || 'gpt-image-2.5-flare',
-        size: '1024x1024',
-        quality: 'medium',
-        output_format: 'webp',
+  const response = await fetch(
+    `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/ai/run/${model}`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: ['Bearer', token].join(' '),
       },
-    ],
-  });
-
-  const item = response.output.find(
-    (entry): entry is typeof entry & { type: 'image_generation_call'; result: string } =>
-      entry.type === 'image_generation_call' && typeof (entry as { result?: unknown }).result === 'string',
+      body: JSON.stringify({ prompt: imagePrompt, steps: 4 }),
+      cache: 'no-store',
+    },
   );
-  if (!item?.result) throw new Error('Image generation did not return an image.');
+
+  const data = (await response.json()) as {
+    success?: boolean;
+    result?: { image?: string } | string;
+    errors?: Array<{ message?: string }>;
+  };
+  if (!response.ok || data.success === false) {
+    const message = data.errors?.map((error) => error.message).filter(Boolean).join('; ') ||
+      `Cloudflare image generation failed (${response.status}).`;
+    throw new Error(message);
+  }
+
+  const base64Image = typeof data.result === 'string' ? data.result : data.result?.image;
+  if (!base64Image) throw new Error('Cloudflare image generation returned no image.');
+
+  const imageBytes = Buffer.from(base64Image, 'base64');
+  const png =
+    imageBytes.length >= 8 &&
+    imageBytes[0] === 0x89 &&
+    imageBytes[1] === 0x50 &&
+    imageBytes[2] === 0x4e &&
+    imageBytes[3] === 0x47;
 
   const mediaUrl = await putMedia({
     businessId: auth.businessId,
-    bytes: Buffer.from(item.result, 'base64'),
-    contentType: 'image/webp',
-    extension: 'webp',
+    bytes: imageBytes,
+    contentType: png ? 'image/png' : 'image/jpeg',
+    extension: png ? 'png' : 'jpg',
   });
 
   await debitCredits({
@@ -145,11 +156,9 @@ export async function generateCampaignImage(
     reason: 'campaign_image_generation',
     externalRef: `campaign-image:${campaign.id}:${randomUUID()}`,
   });
-
   await setCampaignMedia(auth, campaignId, mediaUrl);
   return mediaUrl;
 }
-
 export async function setCampaignMedia(
   auth: AuthContext,
   campaignId: string,
