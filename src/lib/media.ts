@@ -39,8 +39,8 @@ export async function createUploadUrl(input: {
 }): Promise<{ uploadUrl: string; publicUrl: string; key: string }> {
   const extension = allowedTypes.get(input.contentType);
   if (!extension) throw new Error('Unsupported media type.');
-  if (!Number.isFinite(input.fileSize) || input.fileSize <= 0 || input.fileSize > 250 * 1024 * 1024) {
-    throw new Error('Media must be between 1 byte and 250 MB.');
+  if (!Number.isFinite(input.fileSize) || input.fileSize <= 0 || input.fileSize > 50 * 1024 * 1024) {
+    throw new Error('Media must be between 1 byte and 50 MB on the free storage tier.');
   }
 
   const key = `businesses/${input.auth.businessId}/uploads/${Date.now()}-${randomUUID()}.${extension}`;
