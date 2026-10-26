@@ -350,14 +350,14 @@ export async function scheduleCampaign(
     include: { channels: true },
   });
   if (!campaign) throw new Error('CAMPAIGN_NOT_FOUND');
-  if (campaign.status !== 'APPROVED') {
+  if (campaign.status !== 'APPROVED' && campaign.status !== 'SCHEDULED') {
     throw new Error('Campaign must be approved before it can be scheduled.');
   }
 
   const enabledChannels = campaign.channels.filter((channel) => channel.enabled);
   if (enabledChannels.length === 0) throw new Error('No channels are enabled.');
 
-  await assertSchedulingEntitlement(auth, enabledChannels.length, scheduledFor);
+  await assertSchedulingEntitlement(auth, enabledChannels.length, scheduledFor, campaignId);
   await assertPublishingReadiness(auth, enabledChannels);
 
   await getDb().$transaction(async (tx) => {
