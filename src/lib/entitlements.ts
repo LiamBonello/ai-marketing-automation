@@ -20,6 +20,13 @@ export async function assertSchedulingEntitlement(
     throw new Error('An active subscription or trial is required to schedule publishing.');
   }
 
+  if (
+    status === 'TRIALING' &&
+    (!subscription?.currentPeriodEnd || subscription.currentPeriodEnd <= new Date())
+  ) {
+    throw new Error('Your publishing trial has expired. Choose a subscription before scheduling.');
+  }
+
   if (enabledChannelCount > plan.channels) {
     throw new Error(
       `Your ${plan.name} plan supports up to ${plan.channels} channels per campaign.`,
