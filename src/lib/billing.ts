@@ -36,6 +36,9 @@ async function ensureCustomer(auth: AuthContext): Promise<string> {
 
 export async function createPlanCheckout(auth: AuthContext, planId: string): Promise<string> {
   const plan = getPlan(planId);
+  if (!plan.available) {
+    throw new Error(`${plan.name} is not available in the current MVP.`);
+  }
   const price = configuredStripePrice(plan);
   if (!price) throw new Error(`${plan.stripePriceEnv} is not configured.`);
 
