@@ -45,6 +45,8 @@ The app is a modular monolith:
 
 External provider values remain server-side. No provider secret should use a `NEXT_PUBLIC_` prefix.
 
+For the zero-fixed-cost deployment path, follow [`FREE_STACK_SETUP.md`](./FREE_STACK_SETUP.md).
+
 ## Local setup
 
 Requirements:
