@@ -1,9 +1,9 @@
-import { randomUUID } from 'node:crypto';
 import type { AuthContext } from '@/lib/auth';
 import { audit } from '@/lib/audit';
 import { debitCredits } from '@/lib/credits';
 import { getDb } from '@/lib/db';
 import { generateCampaignDraft } from '@/lib/ai';
+import { assertSchedulingEntitlement } from '@/lib/entitlements';
 
 export async function generateAndCreateCampaign(auth: AuthContext, request: string) {
   const cleanRequest = request.trim();
@@ -94,6 +94,148 @@ export async function generateAndCreateCampaign(auth: AuthContext, request: stri
   return campaign;
 }
 
+export async function reviseCampaign(
+  auth: AuthContext,
+  campaignId: string,
+  instruction: string,
+) {
+  const cleanInstruction = instruction.trim();
+  if (cleanInstruction.length < 2 || cleanInstruction.length > 2000) {
+    throw new Error('Revision instruction must be between 2 and 2000 characters.');
+  }
+
+  const campaign = await getDb().campaign.findFirst({
+    where: { id: campaignId, businessId: auth.businessId },
+    include: {
+      business: true,
+      versions: { orderBy: { version: 'desc' }, take: 1 },
+      channels: true,
+    },
+  });
+  if (!campaign) throw new Error('CAMPAIGN_NOT_FOUND');
+  if (['PUBLISHING', 'PUBLISHED'].includes(campaign.status)) {
+    throw new Error('Published campaigns cannot be revised.');
+  }
+
+  const organization = await getDb().organization.findUniqueOrThrow({
+    where: { id: auth.organizationId },
+    select: { creditBalance: true },
+  });
+  if (organization.creditBalance < 1) throw new Error('INSUFFICIENT_CREDITS');
+
+  const current = campaign.versions[0];
+  if (!current) throw new Error('Campaign has no current version.');
+
+  const { draft, model } = await generateCampaignDraft({
+    request: [
+      'Revise the existing campaign according to the user instruction.',
+      `User instruction: ${cleanInstruction}`,
+      `Existing title: ${campaign.title}`,
+      `Existing objective: ${campaign.objective}`,
+      `Existing caption: ${current.caption}`,
+      current.offer ? `Existing offer: ${current.offer}` : 'Existing offer: none',
+      current.callToAction ? `Existing call to action: ${current.callToAction}` : '',
+      'Preserve confirmed business facts and do not invent new commercial claims.',
+    ].filter(Boolean).join('\n'),
+    business: campaign.business,
+  });
+
+  const nextVersion = campaign.version + 1;
+
+  await getDb().$transaction(async (tx) => {
+    const debited = await tx.organization.updateMany({
+      where: {
+        id: auth.organizationId,
+        creditBalance: { gte: 1 },
+      },
+      data: { creditBalance: { decrement: 1 } },
+    });
+    if (debited.count !== 1) throw new Error('INSUFFICIENT_CREDITS');
+
+    const balance = await tx.organization.findUniqueOrThrow({
+      where: { id: auth.organizationId },
+      select: { creditBalance: true },
+    });
+
+    await tx.creditLedger.create({
+      data: {
+        organizationId: auth.organizationId,
+        type: 'AI_GENERATION',
+        amount: -1,
+        balanceAfter: balance.creditBalance,
+        externalRef: `campaign-revision:${campaignId}:v${nextVersion}`,
+        metadata: { reason: 'campaign_text_revision' },
+      },
+    });
+
+    await tx.campaignVersion.create({
+      data: {
+        campaignId,
+        createdById: auth.userId,
+        version: nextVersion,
+        caption: draft.caption,
+        offer: draft.offer,
+        callToAction: draft.callToAction,
+        generationInput: cleanInstruction,
+        generatedBy: model,
+        channelVariants: Object.fromEntries(
+          draft.channels.map((channel) => [
+            channel.channel,
+            { copy: channel.copy, subject: channel.subject },
+          ]),
+        ),
+      },
+    });
+
+    await tx.campaign.update({
+      where: { id: campaignId },
+      data: {
+        title: draft.title,
+        objective: draft.objective,
+        version: nextVersion,
+        status: 'READY',
+        approvedAt: null,
+        scheduledFor: null,
+        lastError: null,
+      },
+    });
+
+    for (const channel of draft.channels) {
+      await tx.campaignChannel.upsert({
+        where: { campaignId_channel: { campaignId, channel: channel.channel } },
+        create: {
+          campaignId,
+          channel: channel.channel,
+          enabled: channel.enabled,
+          variantCopy: channel.copy,
+          subject: channel.subject,
+        },
+        update: {
+          enabled: channel.enabled,
+          variantCopy: channel.copy,
+          subject: channel.subject,
+        },
+      });
+    }
+
+    await tx.publishJob.updateMany({
+      where: { campaignId, status: 'PENDING' },
+      data: { status: 'CANCELLED' },
+    });
+  });
+
+  await audit({
+    organizationId: auth.organizationId,
+    actorUserId: auth.userId,
+    action: 'campaign.revised',
+    entityType: 'campaign',
+    entityId: campaignId,
+    metadata: { version: nextVersion, model },
+  });
+
+  return getCampaign(auth, campaignId);
+}
+
 export async function listCampaigns(auth: AuthContext) {
   return getDb().campaign.findMany({
     where: { businessId: auth.businessId },
@@ -141,8 +283,9 @@ export async function setCampaignChannel(
       where: { id: campaignId },
       data: { status: 'READY', approvedAt: null, scheduledFor: null },
     });
-    await getDb().publishJob.deleteMany({
+    await getDb().publishJob.updateMany({
       where: { campaignId, status: 'PENDING' },
+      data: { status: 'CANCELLED' },
     });
   }
 
@@ -211,9 +354,12 @@ export async function scheduleCampaign(
   const enabledChannels = campaign.channels.filter((channel) => channel.enabled);
   if (enabledChannels.length === 0) throw new Error('No channels are enabled.');
 
+  await assertSchedulingEntitlement(auth, enabledChannels.length, scheduledFor);
+
   await getDb().$transaction(async (tx) => {
-    await tx.publishJob.deleteMany({
+    await tx.publishJob.updateMany({
       where: { campaignId, status: 'PENDING' },
+      data: { status: 'CANCELLED' },
     });
 
     await tx.publishJob.createMany({
@@ -221,8 +367,9 @@ export async function scheduleCampaign(
         campaignId,
         channel: channel.channel,
         scheduledFor,
-        idempotencyKey: `${campaignId}:${channel.channel}:${scheduledFor.toISOString()}:${randomUUID()}`,
+        idempotencyKey: `${campaignId}:${channel.channel}:${scheduledFor.toISOString()}:v${campaign.version}`,
       })),
+      skipDuplicates: true,
     });
 
     await tx.campaign.update({
