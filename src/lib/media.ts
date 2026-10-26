@@ -135,11 +135,19 @@ export async function generateCampaignImage(
   const base64Image = typeof data.result === 'string' ? data.result : data.result?.image;
   if (!base64Image) throw new Error('Cloudflare image generation returned no image.');
 
+  const imageBytes = Buffer.from(base64Image, 'base64');
+  const png =
+    imageBytes.length >= 8 &&
+    imageBytes[0] === 0x89 &&
+    imageBytes[1] === 0x50 &&
+    imageBytes[2] === 0x4e &&
+    imageBytes[3] === 0x47;
+
   const mediaUrl = await putMedia({
     businessId: auth.businessId,
-    bytes: Buffer.from(base64Image, 'base64'),
-    contentType: 'image/jpeg',
-    extension: 'jpg',
+    bytes: imageBytes,
+    contentType: png ? 'image/png' : 'image/jpeg',
+    extension: png ? 'png' : 'jpg',
   });
 
   await debitCredits({
