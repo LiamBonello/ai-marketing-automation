@@ -317,7 +317,50 @@ async function publishTikTok(
   if (!response.ok || data.error?.code !== 'ok' || !data.data?.publish_id) {
     throw new Error(data.error?.message || `TikTok publishing failed (${response.status}).`);
   }
-  return data.data.publish_id;
+
+  const publishId = data.data.publish_id;
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    await new Promise((resolve) => setTimeout(resolve, 3000));
+
+    const statusResponse = await fetch(
+      'https://open.tiktokapis.com/v2/post/publish/status/fetch/',
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json; charset=UTF-8',
+        },
+        body: JSON.stringify({ publish_id: publishId }),
+        cache: 'no-store',
+      },
+    );
+    const statusData = (await statusResponse.json()) as {
+      data?: {
+        status?: string;
+        fail_reason?: string;
+        publicaly_available_post_id?: Array<string | number>;
+      };
+      error?: { code?: string; message?: string };
+    };
+
+    if (!statusResponse.ok || statusData.error?.code !== 'ok') {
+      throw new Error(
+        statusData.error?.message || `TikTok status check failed (${statusResponse.status}).`,
+      );
+    }
+
+    if (statusData.data?.status === 'FAILED') {
+      throw new Error(statusData.data.fail_reason || 'TikTok post processing failed.');
+    }
+
+    if (statusData.data?.status === 'PUBLISH_COMPLETE') {
+      return String(statusData.data.publicaly_available_post_id?.[0] || publishId);
+    }
+  }
+
+  throw new Error(
+    'TikTok accepted the post but processing did not finish within one minute. The job will retry.',
+  );
 }
 
 function unsubscribeToken(contactId: string): string {
