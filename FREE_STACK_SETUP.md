@@ -55,20 +55,20 @@ Schema: marketpilot
 
 The schema and application tables are already provisioned.
 
-From Supabase Dashboard -> Connect, copy:
+From Supabase Dashboard -> Connect, copy two strings:
 
-- a pooled/runtime PostgreSQL connection string for `DATABASE_URL`
-- a direct PostgreSQL connection string for `DIRECT_URL`
+1. **Transaction pooler** (port 6543) for runtime/serverless traffic. Save it as `DATABASE_URL`. Add `pgbouncer=true` and `sslmode=require` query parameters if they are not already present.
+2. **Session pooler** (port 5432) for Prisma admin/migration commands. Save it as `DIRECT_URL`. A direct connection may also be used when your network supports Supabase's IPv6 direct endpoint.
 
 Set:
 
 ```env
-DATABASE_URL=...
-DIRECT_URL=...
+DATABASE_URL=postgresql://...:6543/postgres?pgbouncer=true&sslmode=require
+DIRECT_URL=postgresql://...:5432/postgres?sslmode=require
 DATABASE_SCHEMA=marketpilot
 ```
 
-Keep the database password server-side.
+Keep the database password server-side. The application-side PostgreSQL pool is capped at one connection per warm serverless instance; Supabase's pooler handles concurrency.
 
 ## Supabase schema security
 
