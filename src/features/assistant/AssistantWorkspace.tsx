@@ -246,6 +246,26 @@ export function AssistantWorkspace({
     }
   }
 
+  async function cancelScheduledCampaign() {
+    if (mode === 'demo' || pendingAction || campaign.status !== 'scheduled') return;
+    setPendingAction('cancel-schedule');
+    setError(null);
+    try {
+      await readJson<{ ok: true }>(
+        await fetch(`/api/campaigns/${campaign.id}/schedule`, { method: 'DELETE' }),
+      );
+      setCampaign((current) => ({
+        ...current,
+        status: 'approved',
+        scheduledFor: null,
+      }));
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Schedule cancellation failed.');
+    } finally {
+      setPendingAction(null);
+    }
+  }
+
   async function generateImage() {
     if (mode === 'demo' || pendingAction) return;
     setPendingAction('image');
@@ -582,14 +602,14 @@ export function AssistantWorkspace({
                     disabled={mode === 'demo' || !approved || Boolean(pendingAction)}
                     onClick={() => setScheduleOpen(true)}
                   >
-                    {campaign.status === 'scheduled' ? 'Scheduled' : 'Schedule'}
+                    {campaign.status === 'scheduled' ? 'Reschedule' : 'Schedule'}
                   </Button>
                   <Button
                     fullWidth
                     variant="contained"
                     startIcon={approved ? <CheckCircleRoundedIcon /> : undefined}
                     onClick={() => void approve()}
-                    disabled={Boolean(pendingAction) || campaign.status === 'published'}
+                    disabled={Boolean(pendingAction) || approved}
                     color={approved ? 'success' : 'primary'}
                   >
                     {pendingAction === 'approve' ? 'Approving...' : approved ? 'Approved' : 'Approve campaign'}
@@ -605,7 +625,19 @@ export function AssistantWorkspace({
                 )}
 
                 {campaign.status === 'scheduled' && campaign.scheduledFor && (
-                  <Alert severity="success">
+                  <Alert
+                    severity="success"
+                    action={
+                      <Button
+                        color="inherit"
+                        size="small"
+                        disabled={Boolean(pendingAction)}
+                        onClick={() => void cancelScheduledCampaign()}
+                      >
+                        Cancel schedule
+                      </Button>
+                    }
+                  >
                     Scheduled for {new Date(campaign.scheduledFor).toLocaleString()}.
                   </Alert>
                 )}
