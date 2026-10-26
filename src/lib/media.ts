@@ -1,10 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import OpenAI from 'openai';
 import type { AuthContext } from '@/lib/auth';
 import { requireEnv } from '@/lib/app-config';
-import { debitCredits } from '@/lib/credits';
 import { getDb } from '@/lib/db';
 
 const allowedTypes = new Map([
@@ -75,79 +73,6 @@ export async function putMedia(input: {
     }),
   );
   return objectUrl(key);
-}
-
-export async function generateCampaignImage(
-  auth: AuthContext,
-  campaignId: string,
-  prompt?: string,
-): Promise<string> {
-  const campaign = await getDb().campaign.findFirst({
-    where: { id: campaignId, businessId: auth.businessId },
-    include: {
-      business: true,
-      versions: { orderBy: { version: 'desc' }, take: 1 },
-    },
-  });
-  if (!campaign) throw new Error('CAMPAIGN_NOT_FOUND');
-
-  const organization = await getDb().organization.findUniqueOrThrow({
-    where: { id: auth.organizationId },
-    select: { creditBalance: true },
-  });
-  if (organization.creditBalance < 5) throw new Error('INSUFFICIENT_CREDITS');
-  if (!process.env.OPENAI_API_KEY) throw new Error('OPENAI_API_KEY is not configured.');
-
-  const latest = campaign.versions[0];
-  const imagePrompt =
-    prompt?.trim() ||
-    [
-      `Create a polished social media marketing image for ${campaign.business.name}.`,
-      `Campaign: ${campaign.title}.`,
-      `Objective: ${campaign.objective}.`,
-      latest?.offer ? `Offer context: ${latest.offer}.` : '',
-      campaign.business.industry ? `Industry: ${campaign.business.industry}.` : '',
-      campaign.business.brandGuidelines ? `Brand guidance: ${campaign.business.brandGuidelines}.` : '',
-      'Do not add prices, dates, claims, logos, or text that were not explicitly provided. Prefer a clean commercial composition suitable for Instagram.',
-    ].filter(Boolean).join(' ');
-
-  const client = new OpenAI({ apiKey: requireEnv('OPENAI_API_KEY') });
-  const response = await client.responses.create({
-    model: process.env.OPENAI_MODEL || 'gpt-6-luna',
-    input: imagePrompt,
-    tools: [
-      {
-        type: 'image_generation',
-        model: process.env.OPENAI_IMAGE_MODEL || 'gpt-image-2.5-flare',
-        size: '1024x1024',
-        quality: 'medium',
-        output_format: 'webp',
-      },
-    ],
-  });
-
-  const item = response.output.find(
-    (entry): entry is typeof entry & { type: 'image_generation_call'; result: string } =>
-      entry.type === 'image_generation_call' && typeof (entry as { result?: unknown }).result === 'string',
-  );
-  if (!item?.result) throw new Error('Image generation did not return an image.');
-
-  const mediaUrl = await putMedia({
-    businessId: auth.businessId,
-    bytes: Buffer.from(item.result, 'base64'),
-    contentType: 'image/webp',
-    extension: 'webp',
-  });
-
-  await debitCredits({
-    organizationId: auth.organizationId,
-    amount: 5,
-    reason: 'campaign_image_generation',
-    externalRef: `campaign-image:${campaign.id}:${randomUUID()}`,
-  });
-
-  await setCampaignMedia(auth, campaignId, mediaUrl);
-  return mediaUrl;
 }
 
 export async function setCampaignMedia(
