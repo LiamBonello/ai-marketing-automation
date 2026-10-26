@@ -10,7 +10,7 @@ export default function PrivacyPage() {
         <Typography variant="h2">Privacy Notice</Typography>
         <Typography color="text.secondary">Last updated: 26 October 2026</Typography>
         <Divider />
-        <Typography>This notice explains how {entity} processes personal data when you use MarketPilot. It is a launch template and should be reviewed against the operator's final legal entity, processors, hosting locations, retention schedule, and jurisdiction before public launch.</Typography>
+        <Typography>This notice explains how {entity} processes personal data when you use MarketPilot. It is a launch template and should be reviewed against the operator&apos;s final legal entity, processors, hosting locations, retention schedule, and jurisdiction before public launch.</Typography>
         <Typography variant="h5">Data we process</Typography>
         <Typography>We process account and security records, business profiles, campaign content, connected-account identifiers and authorization tokens, consented email-contact data supplied by customers, billing identifiers, usage and audit records, and campaign performance data returned by connected platforms. Payment card details are handled by the payment provider and are not stored by MarketPilot.</Typography>
         <Typography variant="h5">Purposes and lawful basis</Typography>
