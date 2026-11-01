@@ -49,6 +49,7 @@ interface AssistantWorkspaceProps {
   mode: 'demo' | 'live';
   businessName: string;
   creditBalance?: number;
+  initialCampaign?: CampaignPreview;
 }
 
 const starterPrompts = [
@@ -57,12 +58,17 @@ const starterPrompts = [
   'Create a weekly content plan',
 ] as const;
 
-function initialMessages(businessName: string): Message[] {
+function initialMessages(
+  businessName: string,
+  campaign?: CampaignPreview,
+): Message[] {
   return [
     {
       id: 'welcome',
       role: 'assistant',
-      text: `Tell me what you want to promote or achieve for ${businessName}. I will prepare the campaign and only ask for details that actually matter.`,
+      text: campaign
+        ? `Loaded "${campaign.title}". You can review it here or tell me what you want to change.`
+        : `Tell me what you want to promote or achieve for ${businessName}. I will prepare the campaign and only ask for details that actually matter.`,
     },
   ];
 }
@@ -88,12 +94,17 @@ export function AssistantWorkspace({
   mode,
   businessName,
   creditBalance,
+  initialCampaign,
 }: AssistantWorkspaceProps) {
   const demoCampaign = useMemo(() => mapCampaignResponse(demoCampaignResponse), []);
-  const [campaign, setCampaign] = useState<CampaignPreview>(demoCampaign);
-  const [messages, setMessages] = useState<Message[]>(() => initialMessages(businessName));
+  const [campaign, setCampaign] = useState<CampaignPreview>(
+    () => initialCampaign ?? demoCampaign,
+  );
+  const [messages, setMessages] = useState<Message[]>(
+    () => initialMessages(businessName, initialCampaign),
+  );
   const [input, setInput] = useState('');
-  const [showPreview, setShowPreview] = useState(false);
+  const [showPreview, setShowPreview] = useState(Boolean(initialCampaign));
   const [pendingAction, setPendingAction] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [scheduleOpen, setScheduleOpen] = useState(false);
@@ -350,10 +361,14 @@ export function AssistantWorkspace({
           )}
         </Stack>
         <Typography component="h1" variant="h2">
-          What would you like to market today?
+          {initialCampaign
+            ? 'Review and refine your campaign'
+            : 'What would you like to market today?'}
         </Typography>
         <Typography color="text.secondary" sx={{ maxWidth: 720 }}>
-          Describe the outcome in normal language. MarketPilot prepares the campaign, adapts it for each channel, and keeps the technical settings out of your way.
+          {initialCampaign
+            ? 'Review the saved creative and channels, ask for revisions, then approve or schedule when it is ready.'
+            : 'Describe the outcome in normal language. MarketPilot prepares the campaign, adapts it for each channel, and keeps the technical settings out of your way.'}
         </Typography>
       </Stack>
 
