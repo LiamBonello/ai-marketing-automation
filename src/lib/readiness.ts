@@ -1,4 +1,5 @@
 import type { AuthContext } from '@/lib/auth';
+import { hasConfiguredEnv } from '@/lib/app-config';
 import { getDb } from '@/lib/db';
 
 interface CampaignChannelReadiness {
@@ -22,8 +23,17 @@ export async function assertPublishingReadiness(
 
   for (const channel of enabled) {
     if (channel.channel === 'EMAIL') {
-      if (!process.env.SMTP_HOST || !process.env.SMTP_FROM) {
-        throw new Error('Email is enabled, but SMTP_HOST and SMTP_FROM are not configured.');
+      if (
+        !hasConfiguredEnv(
+          'SMTP_HOST',
+          'SMTP_USER',
+          'SMTP_PASSWORD',
+          'SMTP_FROM',
+        )
+      ) {
+        throw new Error(
+          'Email is enabled, but the Brevo SMTP credentials are not fully configured.',
+        );
       }
 
       const subscribed = await getDb().contact.count({
