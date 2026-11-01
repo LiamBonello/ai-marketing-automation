@@ -49,25 +49,23 @@ For the zero-fixed-cost deployment path, follow [`FREE_STACK_SETUP.md`](./FREE_S
 
 ## Local setup
 
-Requirements:
+The recommended local workflow uses PostgreSQL 18.6 in Docker and local filesystem media storage. Supabase is not required.
 
-- Node.js 22+
-- PostgreSQL
-- npm
+On Windows PowerShell:
 
-Install:
-
-```bash
+```powershell
 npm install
-cp .env.example .env.local
-npm run db:validate
-npm run db:push
+npm run db:local:setup
 npm run dev
 ```
 
 Open `http://localhost:3000`.
 
-`db:push` is appropriate for creating an initial development/staging database from the current schema. Before the first production release, generate and review a baseline Prisma migration against the production database workflow your hosting environment uses.
+If you already added Gemini and Cloudflare values to `.env.local`, the local setup script preserves them.
+
+See [LOCAL_SETUP.md](./LOCAL_SETUP.md) for the complete local database, reset, Prisma Studio, media, and troubleshooting workflow.
+
+`db:push` is appropriate for the current local development database. Before the first production release, generate and review a baseline Prisma migration against the production database workflow.
 
 ## Required environment configuration
 
