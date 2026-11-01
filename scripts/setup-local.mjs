@@ -38,8 +38,8 @@ let source = await readExisting();
 const fixedValues = {
   NEXT_PUBLIC_APP_URL: 'http://localhost:3000',
   MARKETPILOT_DEMO_MODE: 'false',
-  DATABASE_URL: 'postgresql://marketpilot:marketpilot@127.0.0.1:5432/marketpilot',
-  DIRECT_URL: 'postgresql://marketpilot:marketpilot@127.0.0.1:5432/marketpilot',
+  DATABASE_URL: 'postgresql://marketpilot:marketpilot@127.0.0.1:5433/marketpilot',
+  DIRECT_URL: 'postgresql://marketpilot:marketpilot@127.0.0.1:5433/marketpilot',
   DATABASE_SCHEMA: 'public',
   DATABASE_POOL_MAX: '10',
   MEDIA_STORAGE: 'local',
@@ -60,7 +60,7 @@ for (const key of ['TOKEN_ENCRYPTION_KEY', 'CRON_SECRET', 'UNSUBSCRIBE_SECRET'])
 await writeFile(envPath, source.endsWith('\n') ? source : `${source}\n`, 'utf8');
 
 console.log('MarketPilot local environment configured.');
-console.log('  PostgreSQL: postgresql://marketpilot:***@127.0.0.1:5432/marketpilot');
+console.log('  PostgreSQL: postgresql://marketpilot:***@127.0.0.1:5433/marketpilot');
 console.log('  Database schema: public');
 console.log('  Media storage: local public/uploads');
 console.log('  Existing Gemini/Cloudflare keys were preserved.');
