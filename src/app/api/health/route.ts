@@ -63,7 +63,7 @@ export async function GET() {
         instagram: hasConfiguredEnv('META_APP_ID', 'META_APP_SECRET'),
         x: hasConfiguredEnv('X_CLIENT_ID', 'X_CLIENT_SECRET'),
         tiktok: hasConfiguredEnv('TIKTOK_CLIENT_KEY', 'TIKTOK_CLIENT_SECRET'),
-        email: hasConfiguredEnv('SMTP_HOST', 'SMTP_FROM'),
+        email: hasConfiguredEnv('SMTP_HOST', 'SMTP_USER', 'SMTP_PASSWORD', 'SMTP_FROM'),
       },
     });
   } catch (error) {
