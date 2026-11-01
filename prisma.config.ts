@@ -1,10 +1,40 @@
+import { existsSync, readFileSync } from 'node:fs';
 import { defineConfig } from 'prisma/config';
+
+function loadEnvFile(path: string): void {
+  if (!existsSync(path)) return;
+
+  for (const rawLine of readFileSync(path, 'utf8').split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith('#')) continue;
+
+    const separator = line.indexOf('=');
+    if (separator <= 0) continue;
+
+    const key = line.slice(0, separator).trim();
+    let value = line.slice(separator + 1).trim();
+
+    if (
+      (value.startsWith('"') && value.endsWith('"')) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
+      value = value.slice(1, -1);
+    }
+
+    if (process.env[key] === undefined) {
+      process.env[key] = value;
+    }
+  }
+}
+
+loadEnvFile('.env.local');
+loadEnvFile('.env');
 
 function prismaDatabaseUrl(): string {
   const raw =
     process.env.DIRECT_URL ??
     process.env.DATABASE_URL ??
-    'postgresql://postgres:postgres@127.0.0.1:5432/marketpilot';
+    'postgresql://marketpilot:marketpilot@127.0.0.1:5432/marketpilot';
 
   const url = new URL(raw);
   url.searchParams.set('schema', process.env.DATABASE_SCHEMA || 'public');

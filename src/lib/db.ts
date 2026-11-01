@@ -14,7 +14,7 @@ export function getDb(): PrismaClient {
   const adapter = new PrismaPg(
     {
       connectionString,
-      max: 1,
+      max: Number(process.env.DATABASE_POOL_MAX || (process.env.NODE_ENV === 'production' ? 1 : 10)),
     },
     { schema: process.env.DATABASE_SCHEMA || 'public' },
   );
