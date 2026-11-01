@@ -52,9 +52,8 @@ async function chooseDatabasePort(source) {
 
   if (
     Number.isInteger(configured) &&
-    configured >= 1024 &&
-    configured <= 65535 &&
-    (await portAvailable(configured))
+    configured >= 55432 &&
+    configured <= 55550
   ) {
     return configured;
   }
