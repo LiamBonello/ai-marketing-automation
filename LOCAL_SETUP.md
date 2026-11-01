@@ -45,7 +45,7 @@ It automatically:
 1. Preserves your existing `.env.local`.
 2. Keeps your existing Gemini and Cloudflare credentials.
 3. Sets the application URL to `http://localhost:3000`.
-4. Configures PostgreSQL at `127.0.0.1:5432`.
+4. Configures PostgreSQL at `127.0.0.1:5433`.
 5. Generates missing encryption, cron, and unsubscribe secrets.
 6. Configures local media storage.
 7. Starts the PostgreSQL Docker container.
@@ -56,7 +56,7 @@ Local database credentials are intentionally simple because the database is boun
 
 ```text
 Host:     127.0.0.1
-Port:     5432
+Port:     5433
 Database: marketpilot
 User:     marketpilot
 Password: marketpilot
@@ -65,7 +65,7 @@ Password: marketpilot
 The local database URL is:
 
 ```text
-postgresql://marketpilot:marketpilot@127.0.0.1:5432/marketpilot
+postgresql://marketpilot:marketpilot@127.0.0.1:5433/marketpilot
 ```
 
 ## Useful commands
@@ -155,9 +155,9 @@ Stripe, Meta, TikTok, X, and email may remain unconfigured while testing the cor
 
 ## Troubleshooting
 
-### Port 5432 is already in use
+### Port 5433 is already in use
 
-Another PostgreSQL installation may already be using the default port.
+MarketPilot uses host port 5433 specifically to avoid clashing with a normal PostgreSQL installation on 5432.
 
 Check Docker:
 
@@ -165,7 +165,7 @@ Check Docker:
 docker ps
 ```
 
-If you already run PostgreSQL natively, either stop that service or change the host port in `compose.yaml` and update `DATABASE_URL` / `DIRECT_URL`.
+If another application also uses 5433, change the host port in `compose.yaml` and update `DATABASE_URL` / `DIRECT_URL` to match.
 
 ### Docker command is not found
 
