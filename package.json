@@ -27,7 +27,9 @@
     "prebuild": "npm run db:generate",
     "db:check": "node scripts/check-db.mjs",
     "docker:check": "node scripts/check-docker.mjs",
-    "ai:check": "node scripts/check-ai.mjs"
+    "ai:check": "node scripts/check-ai.mjs",
+    "email:check": "node scripts/check-email.mjs",
+    "email:test": "node scripts/check-email.mjs --send"
   },
   "dependencies": {
     "@emotion/cache": "^11.14.0",
