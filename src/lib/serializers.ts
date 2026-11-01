@@ -1,9 +1,41 @@
+import type { LiveCampaignApiResponse } from '@/mappers/campaignMapper';
+
 const channelName = {
   INSTAGRAM: 'Instagram',
   TIKTOK: 'TikTok',
   X: 'X',
   EMAIL: 'Email',
 } as const;
+
+const channelId = {
+  INSTAGRAM: 'instagram',
+  TIKTOK: 'tiktok',
+  X: 'x',
+  EMAIL: 'email',
+} as const;
+
+function serializeStatus(value: string): LiveCampaignApiResponse['status'] {
+  switch (value) {
+    case 'DRAFT':
+      return 'draft';
+    case 'READY':
+      return 'ready';
+    case 'APPROVED':
+      return 'approved';
+    case 'SCHEDULED':
+      return 'scheduled';
+    case 'PUBLISHING':
+      return 'publishing';
+    case 'PUBLISHED':
+      return 'published';
+    case 'FAILED':
+      return 'failed';
+    case 'CANCELLED':
+      return 'cancelled';
+    default:
+      throw new Error(`Unsupported campaign status: ${value}`);
+  }
+}
 
 export function serializeCampaign(campaign: {
   id: string;
@@ -28,8 +60,9 @@ export function serializeCampaign(campaign: {
     mediaUrl: string | null;
     externalPostId?: string | null;
   }>;
-}) {
+}): LiveCampaignApiResponse {
   const version = campaign.versions[0];
+
   return {
     id: campaign.id,
     title: campaign.title,
@@ -37,13 +70,13 @@ export function serializeCampaign(campaign: {
     caption: version?.caption ?? '',
     offer: version?.offer ?? null,
     callToAction: version?.callToAction ?? '',
-    status: campaign.status.toLowerCase(),
+    status: serializeStatus(campaign.status),
     approvedAt: campaign.approvedAt?.toISOString() ?? null,
     scheduledFor: campaign.scheduledFor?.toISOString() ?? null,
     publishedAt: campaign.publishedAt?.toISOString() ?? null,
     createdAt: campaign.createdAt?.toISOString() ?? null,
     channels: campaign.channels.map((channel) => ({
-      id: channel.channel.toLowerCase(),
+      id: channelId[channel.channel],
       label: channelName[channel.channel],
       enabled: channel.enabled,
       copy: channel.variantCopy,
