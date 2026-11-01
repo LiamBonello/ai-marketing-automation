@@ -32,8 +32,8 @@ const model = process.env.GEMINI_MODEL?.trim() || 'gemini-3.8-flash';
 
 if (!apiKey || apiKey.startsWith('REPLACE_ME_')) {
   console.error('GEMINI_API_KEY is not configured in .env.local');
-  process.exit(1);
-}
+  process.exitCode = 1;
+} else {
 
 console.log('Checking Gemini...');
 console.log(`  Model: ${model}`);
@@ -73,8 +73,8 @@ if (!response.ok) {
     body?.error?.message ||
       JSON.stringify(body?.error ?? body, null, 2).slice(0, 2000),
   );
-  process.exit(1);
-}
+  process.exitCode = 1;
+} else {
 
 const modelOutput = Array.isArray(body?.steps)
   ? [...body.steps].reverse().find((step) => step?.type === 'model_output')
@@ -90,8 +90,10 @@ const text = Array.isArray(modelOutput?.content)
 if (!text) {
   console.error('Gemini: FAILED');
   console.error('The request succeeded but no model text output was returned.');
-  process.exit(1);
+  process.exitCode = 1;
+} else {
+  console.log('Gemini: OK');
+  console.log(`  Response: ${text}`);
 }
-
-console.log('Gemini: OK');
-console.log(`  Response: ${text}`);
+}
+}
