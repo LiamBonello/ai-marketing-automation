@@ -45,7 +45,7 @@ It automatically:
 1. Preserves your existing `.env.local`.
 2. Keeps your existing Gemini and Cloudflare credentials.
 3. Sets the application URL to `http://localhost:3000`.
-4. Configures PostgreSQL at `127.0.0.1:5433`.
+4. Configures PostgreSQL at `127.0.0.1:<auto-selected-port>`.
 5. Generates missing encryption, cron, and unsubscribe secrets.
 6. Configures local media storage.
 7. Starts the PostgreSQL Docker container.
@@ -56,7 +56,7 @@ Local database credentials are intentionally simple because the database is boun
 
 ```text
 Host:     127.0.0.1
-Port:     5433
+Port:     auto-selected (normally 55432)
 Database: marketpilot
 User:     marketpilot
 Password: marketpilot
@@ -65,7 +65,7 @@ Password: marketpilot
 The local database URL is:
 
 ```text
-postgresql://marketpilot:marketpilot@127.0.0.1:5433/marketpilot
+postgresql://marketpilot:marketpilot@127.0.0.1:<auto-selected-port>/marketpilot
 ```
 
 ## Useful commands
@@ -155,9 +155,9 @@ Stripe, Meta, TikTok, X, and email may remain unconfigured while testing the cor
 
 ## Troubleshooting
 
-### Port 5433 is already in use
+### The selected PostgreSQL port becomes unavailable
 
-MarketPilot uses host port 5433 specifically to avoid clashing with a normal PostgreSQL installation on 5432.
+MarketPilot deliberately uses a high host port range (`55432` to `55550`) to avoid normal PostgreSQL and Windows service conflicts.
 
 Check Docker:
 
@@ -165,7 +165,7 @@ Check Docker:
 docker ps
 ```
 
-If another application also uses 5433, change the host port in `compose.yaml` and update `DATABASE_URL` / `DIRECT_URL` to match.
+Delete the `MARKETPILOT_DB_PORT` line from `.env.local` and rerun `npm run db:local:setup`; the setup script will choose another free port automatically.
 
 ### Docker command is not found
 
