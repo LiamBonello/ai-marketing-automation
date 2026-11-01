@@ -41,10 +41,16 @@ interface GeminiInteractionResponse {
       type?: string;
       text?: string;
     }>;
+    error?: {
+      code?: number;
+      message?: string;
+    };
   }>;
-  errors?: Array<{
+  error?: {
+    code?: number;
     message?: string;
-  }>;
+    status?: string;
+  };
 }
 
 const campaignJsonSchema = {
@@ -106,68 +112,87 @@ function fallbackDraft(input: GenerateCampaignInput): GeneratedCampaignDraft {
 
 function outputText(response: GeminiInteractionResponse): string {
   const modelOutputs = response.steps?.filter((step) => step.type === 'model_output') ?? [];
+
   for (let stepIndex = modelOutputs.length - 1; stepIndex >= 0; stepIndex -= 1) {
     const content = modelOutputs[stepIndex]?.content ?? [];
     const text = content
       .filter((item) => item.type === 'text' && typeof item.text === 'string')
       .map((item) => item.text)
       .join('');
+
     if (text.trim()) return text.trim();
   }
+
   return '';
+}
+
+function geminiErrorMessage(
+  response: GeminiInteractionResponse,
+  status: number,
+): string {
+  if (response.error?.message) return response.error.message;
+
+  const stepError = response.steps
+    ?.map((step) => step.error?.message)
+    .find((message): message is string => Boolean(message));
+
+  return stepError || `Gemini request failed (${status}).`;
 }
 
 async function callGemini(
   model: string,
   input: GenerateCampaignInput,
 ): Promise<GeneratedCampaignDraft> {
-  const response = await fetch('https://generativelanguage.googleapis.com/v1beta/interactions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-goog-api-key': requireEnv('GEMINI_API_KEY'),
-    },
-    body: JSON.stringify({
-      model,
-      store: false,
-      input: [
-        'You are MarketPilot, a precise marketing campaign assistant for nontechnical small-business owners.',
-        'Never invent prices, discounts, dates, availability, guarantees, testimonials, regulated claims, or business facts.',
-        'If the user did not supply a concrete offer, set offer to null.',
-        'Create channel-specific copy. Email must include a subject.',
-        'Respect the confirmed business profile below.',
-        '',
-        JSON.stringify({
+  const response = await fetch(
+    'https://generativelanguage.googleapis.com/v1/interactions',
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': requireEnv('GEMINI_API_KEY'),
+      },
+      body: JSON.stringify({
+        model,
+        system_instruction: [
+          'You are MarketPilot, a precise marketing campaign assistant for nontechnical small-business owners.',
+          'Never invent prices, discounts, dates, availability, guarantees, testimonials, regulated claims, or business facts.',
+          'If the user did not supply a concrete offer, set offer to null.',
+          'Create channel-specific copy. Email must include a subject.',
+          'Respect only the confirmed business profile supplied by the user.',
+        ].join(' '),
+        input: JSON.stringify({
           request: input.request,
           business: input.business,
         }),
-      ].join('\n'),
-      generation_config: {
-        thinking_level: 'low',
-        max_output_tokens: 5000,
-      },
-      response_format: {
-        type: 'text',
-        mime_type: 'application/json',
-        schema: campaignJsonSchema,
-      },
-    }),
-    cache: 'no-store',
-  });
+        generation_config: {
+          thinking_level: 'low',
+          max_output_tokens: 5000,
+        },
+        response_format: {
+          type: 'text',
+          mime_type: 'application/json',
+          schema: campaignJsonSchema,
+        },
+      }),
+      cache: 'no-store',
+    },
+  );
 
   const data = (await response.json()) as GeminiInteractionResponse;
 
   if (!response.ok) {
-    const message =
-      data.errors?.map((error) => error.message).filter(Boolean).join('; ') ||
-      `Gemini request failed (${response.status}).`;
-    const error = new Error(message) as Error & { status?: number };
+    const error = new Error(geminiErrorMessage(data, response.status)) as Error & {
+      status?: number;
+    };
     error.status = response.status;
     throw error;
   }
 
   if (data.status && data.status !== 'completed') {
-    throw new Error(`Gemini interaction ended with status "${data.status}".`);
+    throw new Error(
+      data.error?.message ||
+        `Gemini interaction ended with status "${data.status}".`,
+    );
   }
 
   const raw = outputText(data);
@@ -187,7 +212,8 @@ export async function generateCampaignDraft(
   }
 
   const primaryModel = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
-  const fallbackModel = process.env.GEMINI_FALLBACK_MODEL || 'gemini-3.5-flash-lite';
+  const fallbackModel =
+    process.env.GEMINI_FALLBACK_MODEL || 'gemini-3.5-flash-lite';
 
   try {
     return {
