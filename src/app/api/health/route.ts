@@ -2,6 +2,22 @@ import { NextResponse } from 'next/server';
 import { hasConfiguredEnv, isDemoMode } from '@/lib/app-config';
 import { getDb } from '@/lib/db';
 
+function databaseErrorMessage(error: unknown): string {
+  if (process.env.NODE_ENV === 'production') return 'Database connection failed.';
+
+  const message =
+    error instanceof Error
+      ? error.message
+      : typeof error === 'string'
+        ? error
+        : 'Unknown database error.';
+
+  return message
+    .replace(/postgres(?:ql)?:\/\/[^\s@]+@/gi, 'postgresql://***@')
+    .replace(/password=[^\s&]+/gi, 'password=***')
+    .slice(0, 600);
+}
+
 export async function GET() {
   if (isDemoMode()) {
     return NextResponse.json({
@@ -20,7 +36,10 @@ export async function GET() {
       integrations: {
         ai: hasConfiguredEnv('GEMINI_API_KEY'),
         aiProvider: hasConfiguredEnv('GEMINI_API_KEY') ? 'gemini' : 'not_configured',
-        aiImageGeneration: hasConfiguredEnv('CLOUDFLARE_ACCOUNT_ID', 'CLOUDFLARE_AI_API_TOKEN'),
+        aiImageGeneration: hasConfiguredEnv(
+          'CLOUDFLARE_ACCOUNT_ID',
+          'CLOUDFLARE_AI_API_TOKEN',
+        ),
         stripe: hasConfiguredEnv('STRIPE_SECRET_KEY', 'STRIPE_WEBHOOK_SECRET'),
         storage:
           process.env.MEDIA_STORAGE === 'local' ||
@@ -47,12 +66,15 @@ export async function GET() {
         email: hasConfiguredEnv('SMTP_HOST', 'SMTP_FROM'),
       },
     });
-  } catch {
+  } catch (error) {
     return NextResponse.json(
       {
         status: 'degraded',
         mode: 'live',
         database: 'unavailable',
+        ...(process.env.NODE_ENV !== 'production'
+          ? { databaseError: databaseErrorMessage(error) }
+          : {}),
       },
       { status: 503 },
     );
