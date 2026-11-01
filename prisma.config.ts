@@ -30,11 +30,28 @@ function loadEnvFile(path: string): void {
 loadEnvFile('.env.local');
 loadEnvFile('.env');
 
+const LOCAL_DATABASE_URL =
+  'postgresql://marketpilot:marketpilot@127.0.0.1:5432/marketpilot';
+
+function usableDatabaseUrl(value: string | undefined): string | null {
+  const candidate = value?.trim();
+  if (!candidate || candidate.startsWith('REPLACE_ME_')) return null;
+
+  try {
+    const parsed = new URL(candidate);
+    return parsed.protocol === 'postgresql:' || parsed.protocol === 'postgres:'
+      ? candidate
+      : null;
+  } catch {
+    return null;
+  }
+}
+
 function prismaDatabaseUrl(): string {
   const raw =
-    process.env.DIRECT_URL ??
-    process.env.DATABASE_URL ??
-    'postgresql://marketpilot:marketpilot@127.0.0.1:5432/marketpilot';
+    usableDatabaseUrl(process.env.DIRECT_URL) ??
+    usableDatabaseUrl(process.env.DATABASE_URL) ??
+    LOCAL_DATABASE_URL;
 
   const url = new URL(raw);
   url.searchParams.set('schema', process.env.DATABASE_SCHEMA || 'public');

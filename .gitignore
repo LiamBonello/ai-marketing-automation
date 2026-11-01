@@ -14,3 +14,4 @@ npm-debug.log*
 .env.development
 .env.test
 public/uploads/
+src/generated/prisma/
