@@ -31,7 +31,7 @@ loadEnvFile('.env.local');
 loadEnvFile('.env');
 
 const LOCAL_DATABASE_URL =
-  'postgresql://marketpilot:marketpilot@127.0.0.1:5432/marketpilot';
+  'postgresql://marketpilot:marketpilot@127.0.0.1:5433/marketpilot';
 
 function usableDatabaseUrl(value: string | undefined): string | null {
   const candidate = value?.trim();
