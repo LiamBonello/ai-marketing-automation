@@ -75,6 +75,8 @@ const databaseUrl =
 const fixedValues = {
   NEXT_PUBLIC_APP_URL: 'http://localhost:3000',
   MARKETPILOT_DEMO_MODE: 'false',
+  GEMINI_MODEL: 'gemini-3.5-flash-lite',
+  GEMINI_FALLBACK_MODEL: 'gemini-3.8-flash',
   MARKETPILOT_DB_PORT: String(databasePort),
   DATABASE_URL: databaseUrl,
   DIRECT_URL: databaseUrl,
