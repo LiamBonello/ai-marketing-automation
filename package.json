@@ -18,7 +18,7 @@
     "test:e2e": "npm run build && playwright test",
     "test:e2e:ci": "playwright test",
     "setup:local": "node scripts/setup-local.mjs",
-    "db:local:up": "docker compose up -d --wait postgres",
+    "db:local:up": "docker compose up -d --wait --force-recreate postgres",
     "db:local:down": "docker compose down",
     "db:local:reset": "docker compose down -v && npm run db:local:setup",
     "db:local:setup": "npm run setup:local && npm run docker:check && npm run db:local:up && npm run db:check && npm run db:push && npm run db:generate",
