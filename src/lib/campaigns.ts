@@ -136,7 +136,11 @@ export async function reviseCampaign(
       `Existing caption: ${current.caption}`,
       current.offer ? `Existing offer: ${current.offer}` : 'Existing offer: none',
       current.callToAction ? `Existing call to action: ${current.callToAction}` : '',
+      `Current publishing channels: ${campaign.channels
+        .map((channel) => `${channel.channel}=${channel.enabled ? 'enabled' : 'disabled'}`)
+        .join(', ')}.`,
       'Preserve confirmed business facts and do not invent new commercial claims.',
+      'Do not decide or alter which publishing channels are enabled. Channel selection is controlled separately by the user interface.',
     ].filter(Boolean).join('\n'),
     business: campaign.business,
   });
@@ -201,19 +205,24 @@ export async function reviseCampaign(
       },
     });
 
+    const existingChannels = new Map(
+      campaign.channels.map((channel) => [channel.channel, channel] as const),
+    );
+
     for (const channel of draft.channels) {
+      const existing = existingChannels.get(channel.channel);
+
       await tx.campaignChannel.upsert({
         where: { campaignId_channel: { campaignId, channel: channel.channel } },
         create: {
           campaignId,
           channel: channel.channel,
-          enabled: channel.enabled,
+          enabled: existing?.enabled ?? false,
           variantCopy: channel.copy,
           subject: channel.subject,
           metadata: channel.channel === 'TIKTOK' ? {} : undefined,
         },
         update: {
-          enabled: channel.enabled,
           variantCopy: channel.copy,
           subject: channel.subject,
           metadata: channel.channel === 'TIKTOK' ? {} : undefined,
