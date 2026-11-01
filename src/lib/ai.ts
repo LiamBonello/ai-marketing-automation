@@ -153,6 +153,7 @@ async function callGemini(
       },
       body: JSON.stringify({
         model,
+        store: false,
         system_instruction: [
           'You are MarketPilot, a precise marketing campaign assistant for nontechnical small-business owners.',
           'Never invent prices, discounts, dates, availability, guarantees, testimonials, regulated claims, or business facts.',
@@ -165,8 +166,8 @@ async function callGemini(
           business: input.business,
         }),
         generation_config: {
-          thinking_level: 'low',
-          max_output_tokens: 5000,
+          thinking_level: model.includes('flash-lite') ? 'minimal' : 'low',
+          max_output_tokens: 1800,
         },
         response_format: {
           type: 'text',
@@ -211,9 +212,10 @@ export async function generateCampaignDraft(
     throw new Error('GEMINI_API_KEY is not configured.');
   }
 
-  const primaryModel = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
+  const primaryModel =
+    process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite';
   const fallbackModel =
-    process.env.GEMINI_FALLBACK_MODEL || 'gemini-3.5-flash-lite';
+    process.env.GEMINI_FALLBACK_MODEL || 'gemini-3.8-flash';
 
   try {
     return {
