@@ -13,3 +13,4 @@ npm-debug.log*
 .env.production
 .env.development
 .env.test
+public/uploads/

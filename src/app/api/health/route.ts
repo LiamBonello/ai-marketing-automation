@@ -22,7 +22,25 @@ export async function GET() {
         aiProvider: hasConfiguredEnv('GEMINI_API_KEY') ? 'gemini' : 'not_configured',
         aiImageGeneration: hasConfiguredEnv('CLOUDFLARE_ACCOUNT_ID', 'CLOUDFLARE_AI_API_TOKEN'),
         stripe: hasConfiguredEnv('STRIPE_SECRET_KEY', 'STRIPE_WEBHOOK_SECRET'),
-        storage: hasConfiguredEnv('S3_BUCKET', 'S3_ACCESS_KEY_ID', 'S3_SECRET_ACCESS_KEY', 'S3_PUBLIC_BASE_URL'),
+        storage:
+          process.env.MEDIA_STORAGE === 'local' ||
+          hasConfiguredEnv(
+            'S3_BUCKET',
+            'S3_ACCESS_KEY_ID',
+            'S3_SECRET_ACCESS_KEY',
+            'S3_PUBLIC_BASE_URL',
+          ),
+        storageProvider:
+          process.env.MEDIA_STORAGE === 'local'
+            ? 'local'
+            : hasConfiguredEnv(
+                  'S3_BUCKET',
+                  'S3_ACCESS_KEY_ID',
+                  'S3_SECRET_ACCESS_KEY',
+                  'S3_PUBLIC_BASE_URL',
+                )
+              ? 's3'
+              : 'not_configured',
         instagram: hasConfiguredEnv('META_APP_ID', 'META_APP_SECRET'),
         x: hasConfiguredEnv('X_CLIENT_ID', 'X_CLIENT_SECRET'),
         tiktok: hasConfiguredEnv('TIKTOK_CLIENT_KEY', 'TIKTOK_CLIENT_SECRET'),
