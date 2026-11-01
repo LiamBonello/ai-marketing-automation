@@ -9,7 +9,7 @@ services:
       POSTGRES_PASSWORD: marketpilot
       POSTGRES_DB: marketpilot
     ports:
-      - "127.0.0.1:5433:5432"
+      - "127.0.0.1:${MARKETPILOT_DB_PORT:-55432}:5432"
     volumes:
       - marketpilot_postgres_data:/var/lib/postgresql
     healthcheck:
