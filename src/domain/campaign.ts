@@ -33,6 +33,7 @@ export interface CampaignPreview {
   scheduledFor?: string | null;
   publishedAt?: string | null;
   createdAt?: string | null;
+  lastError?: string | null;
 }
 
 export interface CampaignSummary {

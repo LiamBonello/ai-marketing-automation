@@ -36,6 +36,9 @@ interface TikTokSettingsResponse {
     allowDuet: boolean;
     allowStitch: boolean;
     consented: boolean;
+    aiGenerated: boolean;
+    brandOrganic: boolean;
+    brandContent: boolean;
     title: string;
   };
 }
@@ -66,6 +69,10 @@ export function TikTokSettingsDialog({
   const [allowComment, setAllowComment] = useState(false);
   const [allowDuet, setAllowDuet] = useState(false);
   const [allowStitch, setAllowStitch] = useState(false);
+  const [aiGenerated, setAiGenerated] = useState(false);
+  const [commercialContent, setCommercialContent] = useState(false);
+  const [brandOrganic, setBrandOrganic] = useState(false);
+  const [brandContent, setBrandContent] = useState(false);
   const [consent, setConsent] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -84,6 +91,10 @@ export function TikTokSettingsDialog({
       setAllowComment(data.saved.allowComment);
       setAllowDuet(data.saved.allowDuet);
       setAllowStitch(data.saved.allowStitch);
+      setAiGenerated(data.saved.aiGenerated);
+      setCommercialContent(data.saved.brandOrganic || data.saved.brandContent);
+      setBrandOrganic(data.saved.brandOrganic);
+      setBrandContent(data.saved.brandContent);
       setConsent(false);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'TikTok settings could not be loaded.');
@@ -93,7 +104,13 @@ export function TikTokSettingsDialog({
   }
 
   async function save() {
-    if (!creator || !privacyLevel || !consent || !title.trim()) return;
+    if (
+      !creator ||
+      !privacyLevel ||
+      !consent ||
+      !title.trim() ||
+      (commercialContent && !brandOrganic && !brandContent)
+    ) return;
     setSaving(true);
     setError(null);
     try {
@@ -107,6 +124,9 @@ export function TikTokSettingsDialog({
             allowComment,
             allowDuet,
             allowStitch,
+            aiGenerated,
+            brandOrganic,
+            brandContent,
             consent: true,
           }),
         }),
@@ -193,6 +213,71 @@ export function TikTokSettingsDialog({
                     label="Allow Stitch"
                   />
                 </Stack>
+                <Stack spacing={0.5}>
+                  <Typography variant="subtitle2">Content disclosures</Typography>
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        checked={aiGenerated}
+                        onChange={(event) => setAiGenerated(event.target.checked)}
+                      />
+                    }
+                    label="This post contains AI-generated or significantly AI-edited media"
+                  />
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        checked={commercialContent}
+                        onChange={(event) => {
+                          const checked = event.target.checked;
+                          setCommercialContent(checked);
+                          if (!checked) {
+                            setBrandOrganic(false);
+                            setBrandContent(false);
+                          }
+                        }}
+                      />
+                    }
+                    label="This content promotes a brand, product, service, or business"
+                  />
+                  {commercialContent && (
+                    <Stack sx={{ pl: 3 }}>
+                      <FormControlLabel
+                        control={
+                          <Checkbox
+                            checked={brandOrganic}
+                            onChange={(event) => setBrandOrganic(event.target.checked)}
+                          />
+                        }
+                        label="Your brand — promotes my own business, brand, product, or service"
+                      />
+                      <FormControlLabel
+                        control={
+                          <Checkbox
+                            checked={brandContent}
+                            onChange={(event) => setBrandContent(event.target.checked)}
+                          />
+                        }
+                        label="Branded content — promotes another brand in exchange for payment or another incentive"
+                      />
+                    </Stack>
+                  )}
+                </Stack>
+                {commercialContent && !brandOrganic && !brandContent && (
+                  <Alert severity="warning">
+                    Select at least one commercial-content disclosure.
+                  </Alert>
+                )}
+                {brandOrganic && !brandContent && (
+                  <Alert severity="info">
+                    Your post will be labelled as promotional content. By posting, you agree to TikTok&apos;s Music Usage Confirmation.
+                  </Alert>
+                )}
+                {brandContent && (
+                  <Alert severity="info">
+                    Your post will be labelled as a paid partnership. By posting, you agree to TikTok&apos;s Branded Content Policy and Music Usage Confirmation.
+                  </Alert>
+                )}
                 <FormControlLabel
                   control={
                     <Checkbox
@@ -200,7 +285,7 @@ export function TikTokSettingsDialog({
                       onChange={(event) => setConsent(event.target.checked)}
                     />
                   }
-                  label="I have reviewed these TikTok settings and expressly consent to MarketPilot sending this content to TikTok when the campaign is published."
+                  label="I have reviewed the caption, privacy, interaction and disclosure settings and expressly consent to MarketPilot sending this content to TikTok when the campaign is published."
                 />
               </>
             ) : null}
@@ -217,7 +302,8 @@ export function TikTokSettingsDialog({
               !creator ||
               !privacyLevel ||
               !title.trim() ||
-              !consent
+              !consent ||
+              (commercialContent && !brandOrganic && !brandContent)
             }
           >
             {saving ? 'Saving...' : 'Confirm TikTok settings'}

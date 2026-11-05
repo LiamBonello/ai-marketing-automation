@@ -31,6 +31,7 @@ export interface LiveCampaignApiResponse {
   scheduledFor?: string | null;
   publishedAt?: string | null;
   createdAt?: string | null;
+  lastError?: string | null;
   channels: Array<{
     id: string;
     label: string;

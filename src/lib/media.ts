@@ -273,7 +273,7 @@ export async function generateCampaignImage(
     externalRef: `campaign-image:${campaign.id}:${randomUUID()}`,
   });
 
-  await setCampaignMedia(auth, campaignId, mediaUrl);
+  await setCampaignMedia(auth, campaignId, mediaUrl, { aiGenerated: true });
   return mediaUrl;
 }
 
@@ -281,6 +281,7 @@ export async function setCampaignMedia(
   auth: AuthContext,
   campaignId: string,
   mediaUrl: string,
+  options: { aiGenerated?: boolean } = {},
 ): Promise<void> {
   const parsed = new URL(mediaUrl);
   if (!['http:', 'https:'].includes(parsed.protocol)) {
@@ -300,9 +301,22 @@ export async function setCampaignMedia(
     await tx.campaignChannel.updateMany({
       where: {
         campaignId,
-        channel: { in: ['INSTAGRAM', 'TIKTOK'] },
+        channel: 'INSTAGRAM',
       },
       data: { mediaUrl },
+    });
+
+    await tx.campaignChannel.updateMany({
+      where: {
+        campaignId,
+        channel: 'TIKTOK',
+      },
+      data: {
+        mediaUrl,
+        metadata: {
+          aiGenerated: options.aiGenerated === true,
+        },
+      },
     });
 
     if (campaign.status === 'APPROVED' || campaign.status === 'SCHEDULED') {

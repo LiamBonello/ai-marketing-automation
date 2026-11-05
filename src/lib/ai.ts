@@ -14,7 +14,17 @@ const campaignDraftSchema = z.object({
       copy: z.string().min(1).max(5000),
       subject: z.string().max(180).nullable(),
     }),
-  ).min(1),
+  ).length(4).superRefine((channels, context) => {
+    const expected = ['INSTAGRAM', 'TIKTOK', 'X', 'EMAIL'] as const;
+    const seen = new Set(channels.map((channel) => channel.channel));
+
+    if (seen.size !== channels.length || expected.some((channel) => !seen.has(channel))) {
+      context.addIssue({
+        code: 'custom',
+        message: 'Campaign output must contain each supported channel exactly once.',
+      });
+    }
+  }),
 });
 
 export type GeneratedCampaignDraft = z.infer<typeof campaignDraftSchema>;
@@ -64,7 +74,6 @@ const campaignJsonSchema = {
     callToAction: { type: 'string' },
     channels: {
       type: 'array',
-      minItems: 1,
       items: {
         type: 'object',
         additionalProperties: false,
@@ -159,6 +168,7 @@ async function callGemini(
           'Never invent prices, discounts, dates, availability, guarantees, testimonials, regulated claims, or business facts.',
           'If the user did not supply a concrete offer, set offer to null.',
           'Create channel-specific copy. Email must include a subject.',
+          'Return exactly four channels, one each for INSTAGRAM, TIKTOK, X, and EMAIL.',
           'Respect only the confirmed business profile supplied by the user.',
         ].join(' '),
         input: JSON.stringify({
@@ -213,9 +223,9 @@ export async function generateCampaignDraft(
   }
 
   const primaryModel =
-    process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite';
+    process.env.GEMINI_MODEL || 'gemini-3.8-flash';
   const fallbackModel =
-    process.env.GEMINI_FALLBACK_MODEL || 'gemini-3.8-flash';
+    process.env.GEMINI_FALLBACK_MODEL || 'gemini-3.5-flash-lite';
 
   try {
     return {

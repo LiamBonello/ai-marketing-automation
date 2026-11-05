@@ -64,6 +64,7 @@ export async function GET() {
         x: hasConfiguredEnv('X_CLIENT_ID', 'X_CLIENT_SECRET'),
         tiktok: hasConfiguredEnv('TIKTOK_CLIENT_KEY', 'TIKTOK_CLIENT_SECRET'),
         email: hasConfiguredEnv('SMTP_HOST', 'SMTP_USER', 'SMTP_PASSWORD', 'SMTP_FROM'),
+        emailWebhook: hasConfiguredEnv('BREVO_WEBHOOK_SECRET'),
       },
     });
   } catch (error) {

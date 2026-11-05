@@ -254,84 +254,104 @@ async function publishTikTok(
   copy: string,
   mediaUrl: string | null,
   rawSettings: unknown,
+  existingPublishId: string | null,
+  onAccepted: (publishId: string) => Promise<void>,
 ): Promise<string> {
   if (!mediaUrl) throw new Error('TikTok requires an image or video.');
 
-  const settings =
-    rawSettings && typeof rawSettings === 'object' && !Array.isArray(rawSettings)
-      ? (rawSettings as Record<string, unknown>)
-      : {};
-  const privacyLevel =
-    typeof settings.privacyLevel === 'string' ? settings.privacyLevel : null;
-  const consentAt = typeof settings.consentAt === 'string' ? settings.consentAt : null;
-  if (!privacyLevel || !consentAt) {
-    throw new Error('TikTok publishing settings and explicit consent are required.');
+  let publishId = existingPublishId;
+
+  if (!publishId) {
+    const settings =
+      rawSettings && typeof rawSettings === 'object' && !Array.isArray(rawSettings)
+        ? (rawSettings as Record<string, unknown>)
+        : {};
+    const privacyLevel =
+      typeof settings.privacyLevel === 'string' ? settings.privacyLevel : null;
+    const consentAt = typeof settings.consentAt === 'string' ? settings.consentAt : null;
+    if (!privacyLevel || !consentAt) {
+      throw new Error('TikTok publishing settings and explicit consent are required.');
+    }
+
+    const creator = await tiktokCreatorInfo(accessToken);
+    if (!creator.privacyOptions.includes(privacyLevel)) {
+      throw new Error(
+        'The saved TikTok privacy option is no longer available. Review TikTok settings again.',
+      );
+    }
+
+    const allowComment = settings.allowComment === true && !creator.commentDisabled;
+    const allowDuet = settings.allowDuet === true && !creator.duetDisabled;
+    const allowStitch = settings.allowStitch === true && !creator.stitchDisabled;
+    const aiGenerated = settings.aiGenerated === true;
+    const brandOrganic = settings.brandOrganic === true;
+    const brandContent = settings.brandContent === true;
+
+    const video = isVideo(mediaUrl);
+    const endpoint = video
+      ? 'https://open.tiktokapis.com/v2/post/publish/video/init/'
+      : 'https://open.tiktokapis.com/v2/post/publish/content/init/';
+
+    const payload = video
+      ? {
+          post_info: {
+            title: copy.slice(0, 2200),
+            privacy_level: privacyLevel,
+            disable_comment: !allowComment,
+            disable_duet: !allowDuet,
+            disable_stitch: !allowStitch,
+            brand_organic_toggle: brandOrganic,
+            brand_content_toggle: brandContent,
+            is_aigc: aiGenerated,
+          },
+          source_info: {
+            source: 'PULL_FROM_URL',
+            video_url: mediaUrl,
+          },
+        }
+      : {
+          post_info: {
+            title: copy.slice(0, 90),
+            description: copy.slice(0, 2200),
+            privacy_level: privacyLevel,
+            disable_comment: !allowComment,
+            auto_add_music: true,
+            brand_organic_toggle: brandOrganic,
+            brand_content_toggle: brandContent,
+          },
+          source_info: {
+            source: 'PULL_FROM_URL',
+            photo_cover_index: 0,
+            photo_images: [mediaUrl],
+          },
+          post_mode: 'DIRECT_POST',
+          media_type: 'PHOTO',
+          is_aigc: aiGenerated,
+        };
+
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json; charset=UTF-8',
+      },
+      body: JSON.stringify(payload),
+      cache: 'no-store',
+    });
+    const data = (await response.json()) as {
+      data?: { publish_id?: string };
+      error?: { code?: string; message?: string };
+    };
+    if (!response.ok || data.error?.code !== 'ok' || !data.data?.publish_id) {
+      throw new Error(
+        data.error?.message || `TikTok publishing failed (${response.status}).`,
+      );
+    }
+
+    publishId = data.data.publish_id;
+    await onAccepted(publishId);
   }
 
-  const creator = await tiktokCreatorInfo(accessToken);
-  if (!creator.privacyOptions.includes(privacyLevel)) {
-    throw new Error('The saved TikTok privacy option is no longer available. Review TikTok settings again.');
-  }
-
-  const allowComment = settings.allowComment === true && !creator.commentDisabled;
-  const allowDuet = settings.allowDuet === true && !creator.duetDisabled;
-  const allowStitch = settings.allowStitch === true && !creator.stitchDisabled;
-
-  const video = isVideo(mediaUrl);
-  const endpoint = video
-    ? 'https://open.tiktokapis.com/v2/post/publish/video/init/'
-    : 'https://open.tiktokapis.com/v2/post/publish/content/init/';
-
-  const payload = video
-    ? {
-        post_info: {
-          title: copy.slice(0, 2200),
-          privacy_level: privacyLevel,
-          disable_comment: !allowComment,
-          disable_duet: !allowDuet,
-          disable_stitch: !allowStitch,
-          brand_organic_toggle: true,
-        },
-        source_info: {
-          source: 'PULL_FROM_URL',
-          video_url: mediaUrl,
-        },
-      }
-    : {
-        post_info: {
-          title: copy.slice(0, 90),
-          description: copy.slice(0, 2200),
-          privacy_level: privacyLevel,
-          disable_comment: !allowComment,
-          auto_add_music: true,
-        },
-        source_info: {
-          source: 'PULL_FROM_URL',
-          photo_cover_index: 0,
-          photo_images: [mediaUrl],
-        },
-        post_mode: 'DIRECT_POST',
-        media_type: 'PHOTO',
-      };
-
-  const response = await fetch(endpoint, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      'Content-Type': 'application/json; charset=UTF-8',
-    },
-    body: JSON.stringify(payload),
-    cache: 'no-store',
-  });
-  const data = (await response.json()) as {
-    data?: { publish_id?: string };
-    error?: { code?: string; message?: string };
-  };
-  if (!response.ok || data.error?.code !== 'ok' || !data.data?.publish_id) {
-    throw new Error(data.error?.message || `TikTok publishing failed (${response.status}).`);
-  }
-
-  const publishId = data.data.publish_id;
   for (let attempt = 0; attempt < 20; attempt += 1) {
     await new Promise((resolve) => setTimeout(resolve, 3000));
 
@@ -358,7 +378,8 @@ async function publishTikTok(
 
     if (!statusResponse.ok || statusData.error?.code !== 'ok') {
       throw new Error(
-        statusData.error?.message || `TikTok status check failed (${statusResponse.status}).`,
+        statusData.error?.message ||
+          `TikTok status check failed (${statusResponse.status}).`,
       );
     }
 
@@ -372,7 +393,7 @@ async function publishTikTok(
   }
 
   throw new Error(
-    'TikTok accepted the post but processing did not finish within one minute. The job will retry.',
+    'TikTok accepted the post but processing is still in progress. The existing submission will be checked again.',
   );
 }
 
@@ -445,6 +466,7 @@ async function publishEmail(input: {
           headers: {
             'List-Unsubscribe': `<${unsubscribeUrl.toString()}>`,
             'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+            'X-Mailin-custom': `marketpilot-contact:${contact.id}`,
           },
         });
       }),
@@ -501,7 +523,19 @@ async function publishJob(jobId: string): Promise<void> {
     } else if (job.channel === 'INSTAGRAM') {
       externalId = await publishInstagram(connection, token, copy, channel.mediaUrl);
     } else {
-      externalId = await publishTikTok(token, copy, channel.mediaUrl, channel.metadata);
+      externalId = await publishTikTok(
+        token,
+        copy,
+        channel.mediaUrl,
+        channel.metadata,
+        job.externalId,
+        async (publishId) => {
+          await getDb().publishJob.updateMany({
+            where: { id: job.id, status: 'PROCESSING' },
+            data: { externalId: publishId },
+          });
+        },
+      );
     }
   }
 
@@ -527,20 +561,127 @@ async function publishJob(jobId: string): Promise<void> {
   ]);
 }
 
-async function finalizeCampaign(campaignId: string): Promise<void> {
-  const jobs = await getDb().publishJob.findMany({
-    where: { campaignId },
-    select: { status: true },
-  });
-  if (jobs.some((job) => job.status === 'PENDING' || job.status === 'PROCESSING')) return;
+const PROCESSING_STALE_AFTER_MS = 30 * 60 * 1000;
 
-  const failed = jobs.some((job) => job.status === 'FAILED');
-  await getDb().campaign.update({
+async function finalizeCampaign(campaignId: string): Promise<void> {
+  const campaign = await getDb().campaign.findUnique({
     where: { id: campaignId },
-    data: failed
-      ? { status: 'FAILED', lastError: 'One or more channels failed to publish.' }
+    select: { scheduledFor: true, status: true, version: true },
+  });
+  if (!campaign?.scheduledFor) return;
+
+  const batchSuffix = `:${campaign.scheduledFor.toISOString()}:v${campaign.version}`;
+  const jobs = await getDb().publishJob.findMany({
+    where: {
+      campaignId,
+      idempotencyKey: { endsWith: batchSuffix },
+    },
+    select: { status: true, channel: true, lastError: true },
+  });
+
+  if (
+    jobs.length === 0 ||
+    jobs.some((job) => job.status === 'PENDING' || job.status === 'PROCESSING')
+  ) {
+    return;
+  }
+
+  const activeJobs = jobs.filter((job) => job.status !== 'CANCELLED');
+  if (activeJobs.length === 0) return;
+
+  const failedJobs = activeJobs.filter((job) => job.status === 'FAILED');
+  const failureMessage = failedJobs.length
+    ? failedJobs
+        .map(
+          (job) =>
+            `${job.channel}: ${job.lastError || 'Publishing failed without a provider error message.'}`,
+        )
+        .join(' | ')
+        .slice(0, 1000)
+    : null;
+
+  await getDb().campaign.updateMany({
+    where: {
+      id: campaignId,
+      version: campaign.version,
+      scheduledFor: campaign.scheduledFor,
+      status: { in: ['SCHEDULED', 'PUBLISHING'] },
+    },
+    data: failureMessage
+      ? { status: 'FAILED', lastError: failureMessage }
       : { status: 'PUBLISHED', publishedAt: new Date(), lastError: null },
   });
+}
+
+async function recoverStaleProcessingJobs(): Promise<void> {
+  const cutoff = new Date(Date.now() - PROCESSING_STALE_AFTER_MS);
+  const staleJobs = await getDb().publishJob.findMany({
+    where: {
+      status: 'PROCESSING',
+      startedAt: { lt: cutoff },
+    },
+    select: {
+      id: true,
+      campaignId: true,
+      channel: true,
+      externalId: true,
+    },
+  });
+  if (staleJobs.length === 0) return;
+
+  const resumableTikTok = staleJobs.filter(
+    (job) => job.channel === 'TIKTOK' && Boolean(job.externalId),
+  );
+  if (resumableTikTok.length > 0) {
+    await getDb().publishJob.updateMany({
+      where: {
+        id: { in: resumableTikTok.map((job) => job.id) },
+        status: 'PROCESSING',
+      },
+      data: {
+        status: 'PENDING',
+        scheduledFor: new Date(),
+        startedAt: null,
+        lastError: 'Resuming TikTok processing using the existing provider publish identifier.',
+      },
+    });
+  }
+
+  const uncertainJobs = staleJobs.filter(
+    (job) => job.channel !== 'TIKTOK' || !job.externalId,
+  );
+  if (uncertainJobs.length === 0) return;
+
+  const now = new Date();
+  await getDb().publishJob.updateMany({
+    where: {
+      id: { in: uncertainJobs.map((job) => job.id) },
+      status: 'PROCESSING',
+    },
+    data: {
+      status: 'FAILED',
+      completedAt: now,
+      lastError:
+        'Publishing worker stopped before completion. Manual review is required before retrying to avoid duplicate publishing.',
+    },
+  });
+
+  for (const campaignId of new Set(uncertainJobs.map((job) => job.campaignId))) {
+    await finalizeCampaign(campaignId);
+  }
+}
+
+async function reconcilePublishingCampaigns(limit = 100): Promise<void> {
+  const campaigns = await getDb().campaign.findMany({
+    where: { status: 'PUBLISHING' },
+    orderBy: { updatedAt: 'asc' },
+    take: limit,
+    select: { id: true },
+  });
+
+  for (const campaign of campaigns) {
+    await finalizeCampaign(campaign.id);
+  }
 }
 
 export async function processDuePublishJobs(limit = 20): Promise<{
@@ -548,6 +689,9 @@ export async function processDuePublishJobs(limit = 20): Promise<{
   succeeded: number;
   failed: number;
 }> {
+  await recoverStaleProcessingJobs();
+  await reconcilePublishingCampaigns();
+
   let processed = 0;
   let succeeded = 0;
   let failed = 0;

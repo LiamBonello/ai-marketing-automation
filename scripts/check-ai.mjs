@@ -28,7 +28,7 @@ loadEnv('.env.local');
 loadEnv('.env');
 
 const apiKey = process.env.GEMINI_API_KEY?.trim();
-const model = process.env.GEMINI_MODEL?.trim() || 'gemini-3.5-flash-lite';
+const model = process.env.GEMINI_MODEL?.trim() || 'gemini-3.8-flash';
 
 if (!apiKey || apiKey.startsWith('REPLACE_ME_')) {
   console.error('GEMINI_API_KEY is not configured in .env.local');

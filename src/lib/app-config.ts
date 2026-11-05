@@ -5,7 +5,29 @@ function configuredValue(name: string): string | null {
 }
 
 export function appUrl(): string {
-  return configuredValue('NEXT_PUBLIC_APP_URL') || 'http://localhost:3000';
+  const configured = configuredValue('NEXT_PUBLIC_APP_URL');
+  if (!configured) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('NEXT_PUBLIC_APP_URL is not configured.');
+    }
+    return 'http://localhost:3000';
+  }
+
+  const url = new URL(configured);
+  if (!['http:', 'https:'].includes(url.protocol)) {
+    throw new Error('NEXT_PUBLIC_APP_URL must use HTTP or HTTPS.');
+  }
+  const localHost =
+    url.hostname === 'localhost' ||
+    url.hostname === '127.0.0.1' ||
+    url.hostname === '[::1]' ||
+    url.hostname === '::1';
+
+  if (process.env.NODE_ENV === 'production' && !localHost && url.protocol !== 'https:') {
+    throw new Error('NEXT_PUBLIC_APP_URL must use HTTPS in production.');
+  }
+
+  return url.origin;
 }
 
 export function isDemoMode(): boolean {

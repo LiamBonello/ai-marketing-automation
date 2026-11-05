@@ -46,6 +46,7 @@ export function serializeCampaign(campaign: {
   scheduledFor?: Date | null;
   publishedAt?: Date | null;
   createdAt?: Date;
+  lastError?: string | null;
   versions: Array<{
     version: number;
     caption: string;
@@ -75,6 +76,7 @@ export function serializeCampaign(campaign: {
     scheduledFor: campaign.scheduledFor?.toISOString() ?? null,
     publishedAt: campaign.publishedAt?.toISOString() ?? null,
     createdAt: campaign.createdAt?.toISOString() ?? null,
+    lastError: campaign.lastError ?? null,
     channels: campaign.channels.map((channel) => ({
       id: channelId[channel.channel],
       label: channelName[channel.channel],

@@ -379,15 +379,29 @@ export async function scheduleCampaign(
       data: { status: 'CANCELLED' },
     });
 
-    await tx.publishJob.createMany({
-      data: enabledChannels.map((channel) => ({
-        campaignId,
-        channel: channel.channel,
-        scheduledFor,
-        idempotencyKey: `${campaignId}:${channel.channel}:${scheduledFor.toISOString()}:v${campaign.version}`,
-      })),
-      skipDuplicates: true,
-    });
+    for (const channel of enabledChannels) {
+      const idempotencyKey =
+        `${campaignId}:${channel.channel}:${scheduledFor.toISOString()}:v${campaign.version}`;
+
+      await tx.publishJob.upsert({
+        where: { idempotencyKey },
+        create: {
+          campaignId,
+          channel: channel.channel,
+          scheduledFor,
+          idempotencyKey,
+        },
+        update: {
+          scheduledFor,
+          status: 'PENDING',
+          attempts: 0,
+          lastError: null,
+          externalId: null,
+          startedAt: null,
+          completedAt: null,
+        },
+      });
+    }
 
     await tx.campaign.update({
       where: { id: campaignId },
@@ -412,6 +426,9 @@ export async function cancelSchedule(auth: AuthContext, campaignId: string) {
     where: { id: campaignId, businessId: auth.businessId },
   });
   if (!campaign) throw new Error('CAMPAIGN_NOT_FOUND');
+  if (campaign.status !== 'SCHEDULED') {
+    throw new Error('Only a scheduled campaign can have its schedule cancelled.');
+  }
 
   await getDb().$transaction([
     getDb().publishJob.updateMany({

@@ -29,10 +29,21 @@ export async function assertPublishingReadiness(
           'SMTP_USER',
           'SMTP_PASSWORD',
           'SMTP_FROM',
+          'UNSUBSCRIBE_SECRET',
+          'NEXT_PUBLIC_APP_URL',
         )
       ) {
         throw new Error(
-          'Email is enabled, but the Brevo SMTP credentials are not fully configured.',
+          'Email is enabled, but SMTP, unsubscribe, or public application URL configuration is incomplete.',
+        );
+      }
+
+      if (
+        process.env.NODE_ENV === 'production' &&
+        !hasConfiguredEnv('BREVO_WEBHOOK_SECRET')
+      ) {
+        throw new Error(
+          'Email is enabled, but the Brevo suppression webhook secret is not configured.',
         );
       }
 
