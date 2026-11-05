@@ -111,6 +111,8 @@ export function AssistantWorkspace({
   const [scheduleValue, setScheduleValue] = useState('');
 
   const approved = ['approved', 'scheduled', 'publishing', 'published'].includes(campaign.status);
+  const publishingLocked = campaign.status === 'publishing' || campaign.status === 'published';
+  const canSchedule = campaign.status === 'approved' || campaign.status === 'scheduled';
   const mediaUrl = campaign.channels.find((channel) => channel.mediaUrl)?.mediaUrl ?? null;
 
   async function submitMessage(message: string) {
@@ -461,7 +463,7 @@ export function AssistantWorkspace({
               multiline
               maxRows={4}
               value={input}
-              disabled={pendingAction === 'generate'}
+              disabled={pendingAction === 'generate' || publishingLocked}
               onChange={(event) => setInput(event.target.value)}
               onKeyDown={(event) => {
                 if (event.key === 'Enter' && !event.shiftKey) {
@@ -548,7 +550,7 @@ export function AssistantWorkspace({
                         control={
                           <Switch
                             checked={channel.enabled}
-                            disabled={Boolean(pendingAction)}
+                            disabled={Boolean(pendingAction) || publishingLocked}
                             onChange={() => void toggleChannel(channel.id)}
                             slotProps={{ input: { 'aria-label': `Toggle ${channel.label}` } }}
                           />
@@ -565,7 +567,7 @@ export function AssistantWorkspace({
                     {campaign.channels.some((channel) => channel.id === 'tiktok' && channel.enabled) && (
                       <TikTokSettingsDialog
                         campaignId={campaign.id}
-                        disabled={Boolean(pendingAction)}
+                        disabled={Boolean(pendingAction) || publishingLocked}
                         onSaved={() =>
                           setCampaign((current) => ({
                             ...current,
@@ -581,7 +583,7 @@ export function AssistantWorkspace({
                         fullWidth
                         variant="outlined"
                         startIcon={<AutoAwesomeRoundedIcon />}
-                        disabled={Boolean(pendingAction)}
+                        disabled={Boolean(pendingAction) || publishingLocked}
                         onClick={() => void generateImage()}
                       >
                         {pendingAction === 'image' ? 'Generating...' : 'Generate image'}
@@ -591,7 +593,7 @@ export function AssistantWorkspace({
                         component="label"
                         variant="outlined"
                         startIcon={<UploadRoundedIcon />}
-                        disabled={Boolean(pendingAction)}
+                        disabled={Boolean(pendingAction) || publishingLocked}
                       >
                         {pendingAction === 'upload' ? 'Uploading...' : 'Upload media'}
                         <input
@@ -614,7 +616,7 @@ export function AssistantWorkspace({
                     fullWidth
                     variant="outlined"
                     startIcon={<CalendarMonthRoundedIcon />}
-                    disabled={mode === 'demo' || !approved || Boolean(pendingAction)}
+                    disabled={mode === 'demo' || !canSchedule || Boolean(pendingAction)}
                     onClick={() => setScheduleOpen(true)}
                   >
                     {campaign.status === 'scheduled' ? 'Reschedule' : 'Schedule'}
