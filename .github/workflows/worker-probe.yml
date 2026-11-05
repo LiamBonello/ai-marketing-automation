@@ -59,3 +59,18 @@ jobs:
           APP_URL: https://golden-donut-670046.netlify.app
         run: |
           curl --fail-with-body --silent --show-error "${APP_URL%/}/api/health"
+
+
+  providers:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check provider authentication
+        env:
+          APP_URL: https://deploy-preview-8--golden-donut-670046.netlify.app
+          CRON_SECRET: ${{ secrets.MARKETPILOT_CRON_SECRET }}
+        run: |
+          test -n "$CRON_SECRET"
+          curl --fail-with-body --silent --show-error \
+            --request POST \
+            --header "Authorization: Bearer $CRON_SECRET" \
+            "${APP_URL%/}/api/cron/provider-check"
