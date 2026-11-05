@@ -602,21 +602,49 @@ async function finalizeCampaign(campaignId: string): Promise<void> {
   });
 }
 
-async function failStaleProcessingJobs(): Promise<void> {
+async function recoverStaleProcessingJobs(): Promise<void> {
   const cutoff = new Date(Date.now() - PROCESSING_STALE_AFTER_MS);
   const staleJobs = await getDb().publishJob.findMany({
     where: {
       status: 'PROCESSING',
       startedAt: { lt: cutoff },
     },
-    select: { id: true, campaignId: true },
+    select: {
+      id: true,
+      campaignId: true,
+      channel: true,
+      externalId: true,
+    },
   });
   if (staleJobs.length === 0) return;
+
+  const resumableTikTok = staleJobs.filter(
+    (job) => job.channel === 'TIKTOK' && Boolean(job.externalId),
+  );
+  if (resumableTikTok.length > 0) {
+    await getDb().publishJob.updateMany({
+      where: {
+        id: { in: resumableTikTok.map((job) => job.id) },
+        status: 'PROCESSING',
+      },
+      data: {
+        status: 'PENDING',
+        scheduledFor: new Date(),
+        startedAt: null,
+        lastError: 'Resuming TikTok processing using the existing provider publish identifier.',
+      },
+    });
+  }
+
+  const uncertainJobs = staleJobs.filter(
+    (job) => job.channel !== 'TIKTOK' || !job.externalId,
+  );
+  if (uncertainJobs.length === 0) return;
 
   const now = new Date();
   await getDb().publishJob.updateMany({
     where: {
-      id: { in: staleJobs.map((job) => job.id) },
+      id: { in: uncertainJobs.map((job) => job.id) },
       status: 'PROCESSING',
     },
     data: {
@@ -627,7 +655,7 @@ async function failStaleProcessingJobs(): Promise<void> {
     },
   });
 
-  for (const campaignId of new Set(staleJobs.map((job) => job.campaignId))) {
+  for (const campaignId of new Set(uncertainJobs.map((job) => job.campaignId))) {
     await finalizeCampaign(campaignId);
   }
 }
@@ -650,7 +678,7 @@ export async function processDuePublishJobs(limit = 20): Promise<{
   succeeded: number;
   failed: number;
 }> {
-  await failStaleProcessingJobs();
+  await recoverStaleProcessingJobs();
   await reconcilePublishingCampaigns();
 
   let processed = 0;
