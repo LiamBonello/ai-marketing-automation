@@ -153,11 +153,14 @@ function subscriptionStatus(status: Stripe.Subscription.Status) {
 }
 
 function planFromPrice(priceId: string | undefined): string {
-  if (!priceId) return 'starter';
-  for (const plan of plans) {
-    if (configuredStripePrice(plan) === priceId) return plan.id;
+  if (!priceId) throw new Error('Stripe subscription item is missing a price identifier.');
+
+  const plan = plans.find((candidate) => configuredStripePrice(candidate) === priceId);
+  if (!plan) {
+    throw new Error(`Stripe price "${priceId}" is not mapped to a MarketPilot plan.`);
   }
-  return 'starter';
+
+  return plan.id;
 }
 
 export async function syncSubscription(subscription: Stripe.Subscription): Promise<void> {
@@ -165,8 +168,17 @@ export async function syncSubscription(subscription: Stripe.Subscription): Promi
   if (!organizationId) return;
 
   const item = subscription.items.data[0];
-  const plan = subscription.metadata.plan || planFromPrice(item?.price.id);
-  const currentPeriodEnd = item?.current_period_end
+  if (!item) throw new Error('Stripe subscription has no subscription item.');
+
+  const metadataPlan = subscription.metadata.plan;
+  const plan = metadataPlan
+    ? getPlan(metadataPlan)
+    : getPlan(planFromPrice(item.price.id));
+  if (metadataPlan && plan.id !== metadataPlan) {
+    throw new Error(`Stripe subscription references an unknown MarketPilot plan "${metadataPlan}".`);
+  }
+
+  const currentPeriodEnd = item.current_period_end
     ? new Date(item.current_period_end * 1000)
     : null;
 
@@ -174,18 +186,18 @@ export async function syncSubscription(subscription: Stripe.Subscription): Promi
     where: { organizationId },
     create: {
       organizationId,
-      plan,
+      plan: plan.id,
       status: subscriptionStatus(subscription.status),
       stripeSubscriptionId: subscription.id,
-      stripePriceId: item?.price.id,
+      stripePriceId: item.price.id,
       currentPeriodEnd,
       cancelAtPeriodEnd: subscription.cancel_at_period_end,
     },
     update: {
-      plan,
+      plan: plan.id,
       status: subscriptionStatus(subscription.status),
       stripeSubscriptionId: subscription.id,
-      stripePriceId: item?.price.id,
+      stripePriceId: item.price.id,
       currentPeriodEnd,
       cancelAtPeriodEnd: subscription.cancel_at_period_end,
     },
@@ -249,8 +261,14 @@ export async function handleStripeEvent(event: Stripe.Event): Promise<void> {
     const organizationId = subscription.metadata.organizationId;
     if (!organizationId) return;
 
-    const planId = subscription.metadata.plan || planFromPrice(subscription.items.data[0]?.price.id);
-    const plan = getPlan(planId);
+    const item = subscription.items.data[0];
+    if (!item) throw new Error('Stripe subscription has no subscription item.');
+
+    const metadataPlan = subscription.metadata.plan;
+    const plan = metadataPlan ? getPlan(metadataPlan) : getPlan(planFromPrice(item.price.id));
+    if (metadataPlan && plan.id !== metadataPlan) {
+      throw new Error(`Stripe subscription references an unknown MarketPilot plan "${metadataPlan}".`);
+    }
 
     await grantCredits({
       organizationId,
