@@ -38,6 +38,15 @@ export async function assertPublishingReadiness(
         );
       }
 
+      if (
+        process.env.NODE_ENV === 'production' &&
+        !hasConfiguredEnv('BREVO_WEBHOOK_SECRET')
+      ) {
+        throw new Error(
+          'Email is enabled, but the Brevo suppression webhook secret is not configured.',
+        );
+      }
+
       const subscribed = await getDb().contact.count({
         where: { businessId: auth.businessId, status: 'SUBSCRIBED' },
       });
