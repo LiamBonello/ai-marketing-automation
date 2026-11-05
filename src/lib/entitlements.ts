@@ -46,7 +46,7 @@ export async function assertSchedulingEntitlement(
       campaign: {
         business: { organizationId: auth.organizationId },
       },
-      status: { not: 'CANCELLED' },
+      status: { in: ['PENDING', 'PROCESSING', 'SUCCEEDED'] },
       campaignId: excludeCampaignId ? { not: excludeCampaignId } : undefined,
       scheduledFor: { gte: monthStart, lt: nextMonth },
     },
