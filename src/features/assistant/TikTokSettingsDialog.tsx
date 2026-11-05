@@ -70,6 +70,7 @@ export function TikTokSettingsDialog({
   const [allowDuet, setAllowDuet] = useState(false);
   const [allowStitch, setAllowStitch] = useState(false);
   const [aiGenerated, setAiGenerated] = useState(false);
+  const [commercialContent, setCommercialContent] = useState(false);
   const [brandOrganic, setBrandOrganic] = useState(false);
   const [brandContent, setBrandContent] = useState(false);
   const [consent, setConsent] = useState(false);
@@ -91,6 +92,7 @@ export function TikTokSettingsDialog({
       setAllowDuet(data.saved.allowDuet);
       setAllowStitch(data.saved.allowStitch);
       setAiGenerated(data.saved.aiGenerated);
+      setCommercialContent(data.saved.brandOrganic || data.saved.brandContent);
       setBrandOrganic(data.saved.brandOrganic);
       setBrandContent(data.saved.brandContent);
       setConsent(false);
@@ -102,7 +104,13 @@ export function TikTokSettingsDialog({
   }
 
   async function save() {
-    if (!creator || !privacyLevel || !consent || !title.trim()) return;
+    if (
+      !creator ||
+      !privacyLevel ||
+      !consent ||
+      !title.trim() ||
+      (commercialContent && !brandOrganic && !brandContent)
+    ) return;
     setSaving(true);
     setError(null);
     try {
@@ -219,25 +227,55 @@ export function TikTokSettingsDialog({
                   <FormControlLabel
                     control={
                       <Checkbox
-                        checked={brandOrganic}
-                        onChange={(event) => setBrandOrganic(event.target.checked)}
+                        checked={commercialContent}
+                        onChange={(event) => {
+                          const checked = event.target.checked;
+                          setCommercialContent(checked);
+                          if (!checked) {
+                            setBrandOrganic(false);
+                            setBrandContent(false);
+                          }
+                        }}
                       />
                     }
-                    label="This post promotes my own business, brand, product, or service"
+                    label="This content promotes a brand, product, service, or business"
                   />
-                  <FormControlLabel
-                    control={
-                      <Checkbox
-                        checked={brandContent}
-                        onChange={(event) => setBrandContent(event.target.checked)}
+                  {commercialContent && (
+                    <Stack sx={{ pl: 3 }}>
+                      <FormControlLabel
+                        control={
+                          <Checkbox
+                            checked={brandOrganic}
+                            onChange={(event) => setBrandOrganic(event.target.checked)}
+                          />
+                        }
+                        label="Your brand — promotes my own business, brand, product, or service"
                       />
-                    }
-                    label="This post promotes another brand, product, or service in exchange for payment or another incentive"
-                  />
+                      <FormControlLabel
+                        control={
+                          <Checkbox
+                            checked={brandContent}
+                            onChange={(event) => setBrandContent(event.target.checked)}
+                          />
+                        }
+                        label="Branded content — promotes another brand in exchange for payment or another incentive"
+                      />
+                    </Stack>
+                  )}
                 </Stack>
-                {(brandOrganic || brandContent) && (
+                {commercialContent && !brandOrganic && !brandContent && (
                   <Alert severity="warning">
-                    Commercial content must comply with TikTok&apos;s branded-content and music-usage requirements. Confirm the disclosure choices match the campaign before publishing.
+                    Select at least one commercial-content disclosure.
+                  </Alert>
+                )}
+                {brandOrganic && !brandContent && (
+                  <Alert severity="info">
+                    Your post will be labelled as promotional content. By posting, you agree to TikTok&apos;s Music Usage Confirmation.
+                  </Alert>
+                )}
+                {brandContent && (
+                  <Alert severity="info">
+                    Your post will be labelled as a paid partnership. By posting, you agree to TikTok&apos;s Branded Content Policy and Music Usage Confirmation.
                   </Alert>
                 )}
                 <FormControlLabel
@@ -264,7 +302,8 @@ export function TikTokSettingsDialog({
               !creator ||
               !privacyLevel ||
               !title.trim() ||
-              !consent
+              !consent ||
+              (commercialContent && !brandOrganic && !brandContent)
             }
           >
             {saving ? 'Saving...' : 'Confirm TikTok settings'}
