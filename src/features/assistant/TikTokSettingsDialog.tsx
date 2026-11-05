@@ -36,6 +36,9 @@ interface TikTokSettingsResponse {
     allowDuet: boolean;
     allowStitch: boolean;
     consented: boolean;
+    aiGenerated: boolean;
+    brandOrganic: boolean;
+    brandContent: boolean;
     title: string;
   };
 }
@@ -66,6 +69,9 @@ export function TikTokSettingsDialog({
   const [allowComment, setAllowComment] = useState(false);
   const [allowDuet, setAllowDuet] = useState(false);
   const [allowStitch, setAllowStitch] = useState(false);
+  const [aiGenerated, setAiGenerated] = useState(false);
+  const [brandOrganic, setBrandOrganic] = useState(false);
+  const [brandContent, setBrandContent] = useState(false);
   const [consent, setConsent] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -84,6 +90,9 @@ export function TikTokSettingsDialog({
       setAllowComment(data.saved.allowComment);
       setAllowDuet(data.saved.allowDuet);
       setAllowStitch(data.saved.allowStitch);
+      setAiGenerated(data.saved.aiGenerated);
+      setBrandOrganic(data.saved.brandOrganic);
+      setBrandContent(data.saved.brandContent);
       setConsent(false);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'TikTok settings could not be loaded.');
@@ -107,6 +116,9 @@ export function TikTokSettingsDialog({
             allowComment,
             allowDuet,
             allowStitch,
+            aiGenerated,
+            brandOrganic,
+            brandContent,
             consent: true,
           }),
         }),
@@ -193,6 +205,41 @@ export function TikTokSettingsDialog({
                     label="Allow Stitch"
                   />
                 </Stack>
+                <Stack spacing={0.5}>
+                  <Typography variant="subtitle2">Content disclosures</Typography>
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        checked={aiGenerated}
+                        onChange={(event) => setAiGenerated(event.target.checked)}
+                      />
+                    }
+                    label="This post contains AI-generated or significantly AI-edited media"
+                  />
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        checked={brandOrganic}
+                        onChange={(event) => setBrandOrganic(event.target.checked)}
+                      />
+                    }
+                    label="This post promotes my own business, brand, product, or service"
+                  />
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        checked={brandContent}
+                        onChange={(event) => setBrandContent(event.target.checked)}
+                      />
+                    }
+                    label="This post promotes another brand, product, or service in exchange for payment or another incentive"
+                  />
+                </Stack>
+                {(brandOrganic || brandContent) && (
+                  <Alert severity="warning">
+                    Commercial content must comply with TikTok&apos;s branded-content and music-usage requirements. Confirm the disclosure choices match the campaign before publishing.
+                  </Alert>
+                )}
                 <FormControlLabel
                   control={
                     <Checkbox
@@ -200,7 +247,7 @@ export function TikTokSettingsDialog({
                       onChange={(event) => setConsent(event.target.checked)}
                     />
                   }
-                  label="I have reviewed these TikTok settings and expressly consent to MarketPilot sending this content to TikTok when the campaign is published."
+                  label="I have reviewed the caption, privacy, interaction and disclosure settings and expressly consent to MarketPilot sending this content to TikTok when the campaign is published."
                 />
               </>
             ) : null}
