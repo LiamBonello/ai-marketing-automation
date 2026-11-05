@@ -74,7 +74,7 @@ const campaignJsonSchema = {
     callToAction: { type: 'string' },
     channels: {
       type: 'array',
-       items: {
+      items: {
         type: 'object',
         additionalProperties: false,
         properties: {
@@ -223,9 +223,9 @@ export async function generateCampaignDraft(
   }
 
   const primaryModel =
-    process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite';
+    process.env.GEMINI_MODEL || 'gemini-3.8-flash';
   const fallbackModel =
-    process.env.GEMINI_FALLBACK_MODEL || 'gemini-3.8-flash';
+    process.env.GEMINI_FALLBACK_MODEL || 'gemini-3.5-flash-lite';
 
   try {
     return {
