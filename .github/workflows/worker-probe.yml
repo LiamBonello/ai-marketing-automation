@@ -45,3 +45,5 @@ jobs:
 # probe production after corrected Supabase credentials
 
 # probe production after final Supabase username fix
+
+# probe username-shape diagnostic
