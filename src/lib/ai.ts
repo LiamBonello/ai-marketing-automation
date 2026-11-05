@@ -15,10 +15,10 @@ const campaignDraftSchema = z.object({
       subject: z.string().max(180).nullable(),
     }),
   ).length(4).superRefine((channels, context) => {
-    const expected = new Set(['INSTAGRAM', 'TIKTOK', 'X', 'EMAIL']);
+    const expected = ['INSTAGRAM', 'TIKTOK', 'X', 'EMAIL'] as const;
     const seen = new Set(channels.map((channel) => channel.channel));
 
-    if (seen.size !== channels.length || [...expected].some((channel) => !seen.has(channel))) {
+    if (seen.size !== channels.length || expected.some((channel) => !seen.has(channel))) {
       context.addIssue({
         code: 'custom',
         message: 'Campaign output must contain each supported channel exactly once.',
