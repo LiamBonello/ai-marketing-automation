@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { audit } from '@/lib/audit';
-import { requireEnv } from '@/lib/app-config';
 import { safeEqual } from '@/lib/crypto';
 import { getDb } from '@/lib/db';
 
