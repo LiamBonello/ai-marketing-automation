@@ -254,84 +254,97 @@ async function publishTikTok(
   copy: string,
   mediaUrl: string | null,
   rawSettings: unknown,
+  existingPublishId: string | null,
+  onAccepted: (publishId: string) => Promise<void>,
 ): Promise<string> {
   if (!mediaUrl) throw new Error('TikTok requires an image or video.');
 
-  const settings =
-    rawSettings && typeof rawSettings === 'object' && !Array.isArray(rawSettings)
-      ? (rawSettings as Record<string, unknown>)
-      : {};
-  const privacyLevel =
-    typeof settings.privacyLevel === 'string' ? settings.privacyLevel : null;
-  const consentAt = typeof settings.consentAt === 'string' ? settings.consentAt : null;
-  if (!privacyLevel || !consentAt) {
-    throw new Error('TikTok publishing settings and explicit consent are required.');
+  let publishId = existingPublishId;
+
+  if (!publishId) {
+    const settings =
+      rawSettings && typeof rawSettings === 'object' && !Array.isArray(rawSettings)
+        ? (rawSettings as Record<string, unknown>)
+        : {};
+    const privacyLevel =
+      typeof settings.privacyLevel === 'string' ? settings.privacyLevel : null;
+    const consentAt = typeof settings.consentAt === 'string' ? settings.consentAt : null;
+    if (!privacyLevel || !consentAt) {
+      throw new Error('TikTok publishing settings and explicit consent are required.');
+    }
+
+    const creator = await tiktokCreatorInfo(accessToken);
+    if (!creator.privacyOptions.includes(privacyLevel)) {
+      throw new Error(
+        'The saved TikTok privacy option is no longer available. Review TikTok settings again.',
+      );
+    }
+
+    const allowComment = settings.allowComment === true && !creator.commentDisabled;
+    const allowDuet = settings.allowDuet === true && !creator.duetDisabled;
+    const allowStitch = settings.allowStitch === true && !creator.stitchDisabled;
+
+    const video = isVideo(mediaUrl);
+    const endpoint = video
+      ? 'https://open.tiktokapis.com/v2/post/publish/video/init/'
+      : 'https://open.tiktokapis.com/v2/post/publish/content/init/';
+
+    const payload = video
+      ? {
+          post_info: {
+            title: copy.slice(0, 2200),
+            privacy_level: privacyLevel,
+            disable_comment: !allowComment,
+            disable_duet: !allowDuet,
+            disable_stitch: !allowStitch,
+            brand_organic_toggle: true,
+          },
+          source_info: {
+            source: 'PULL_FROM_URL',
+            video_url: mediaUrl,
+          },
+        }
+      : {
+          post_info: {
+            title: copy.slice(0, 90),
+            description: copy.slice(0, 2200),
+            privacy_level: privacyLevel,
+            disable_comment: !allowComment,
+            auto_add_music: true,
+            brand_organic_toggle: true,
+          },
+          source_info: {
+            source: 'PULL_FROM_URL',
+            photo_cover_index: 0,
+            photo_images: [mediaUrl],
+          },
+          post_mode: 'DIRECT_POST',
+          media_type: 'PHOTO',
+        };
+
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json; charset=UTF-8',
+      },
+      body: JSON.stringify(payload),
+      cache: 'no-store',
+    });
+    const data = (await response.json()) as {
+      data?: { publish_id?: string };
+      error?: { code?: string; message?: string };
+    };
+    if (!response.ok || data.error?.code !== 'ok' || !data.data?.publish_id) {
+      throw new Error(
+        data.error?.message || `TikTok publishing failed (${response.status}).`,
+      );
+    }
+
+    publishId = data.data.publish_id;
+    await onAccepted(publishId);
   }
 
-  const creator = await tiktokCreatorInfo(accessToken);
-  if (!creator.privacyOptions.includes(privacyLevel)) {
-    throw new Error('The saved TikTok privacy option is no longer available. Review TikTok settings again.');
-  }
-
-  const allowComment = settings.allowComment === true && !creator.commentDisabled;
-  const allowDuet = settings.allowDuet === true && !creator.duetDisabled;
-  const allowStitch = settings.allowStitch === true && !creator.stitchDisabled;
-
-  const video = isVideo(mediaUrl);
-  const endpoint = video
-    ? 'https://open.tiktokapis.com/v2/post/publish/video/init/'
-    : 'https://open.tiktokapis.com/v2/post/publish/content/init/';
-
-  const payload = video
-    ? {
-        post_info: {
-          title: copy.slice(0, 2200),
-          privacy_level: privacyLevel,
-          disable_comment: !allowComment,
-          disable_duet: !allowDuet,
-          disable_stitch: !allowStitch,
-          brand_organic_toggle: true,
-        },
-        source_info: {
-          source: 'PULL_FROM_URL',
-          video_url: mediaUrl,
-        },
-      }
-    : {
-        post_info: {
-          title: copy.slice(0, 90),
-          description: copy.slice(0, 2200),
-          privacy_level: privacyLevel,
-          disable_comment: !allowComment,
-          auto_add_music: true,
-        },
-        source_info: {
-          source: 'PULL_FROM_URL',
-          photo_cover_index: 0,
-          photo_images: [mediaUrl],
-        },
-        post_mode: 'DIRECT_POST',
-        media_type: 'PHOTO',
-      };
-
-  const response = await fetch(endpoint, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      'Content-Type': 'application/json; charset=UTF-8',
-    },
-    body: JSON.stringify(payload),
-    cache: 'no-store',
-  });
-  const data = (await response.json()) as {
-    data?: { publish_id?: string };
-    error?: { code?: string; message?: string };
-  };
-  if (!response.ok || data.error?.code !== 'ok' || !data.data?.publish_id) {
-    throw new Error(data.error?.message || `TikTok publishing failed (${response.status}).`);
-  }
-
-  const publishId = data.data.publish_id;
   for (let attempt = 0; attempt < 20; attempt += 1) {
     await new Promise((resolve) => setTimeout(resolve, 3000));
 
@@ -358,7 +371,8 @@ async function publishTikTok(
 
     if (!statusResponse.ok || statusData.error?.code !== 'ok') {
       throw new Error(
-        statusData.error?.message || `TikTok status check failed (${statusResponse.status}).`,
+        statusData.error?.message ||
+          `TikTok status check failed (${statusResponse.status}).`,
       );
     }
 
@@ -372,7 +386,7 @@ async function publishTikTok(
   }
 
   throw new Error(
-    'TikTok accepted the post but processing did not finish within one minute. The job will retry.',
+    'TikTok accepted the post but processing is still in progress. The existing submission will be checked again.',
   );
 }
 
@@ -501,7 +515,19 @@ async function publishJob(jobId: string): Promise<void> {
     } else if (job.channel === 'INSTAGRAM') {
       externalId = await publishInstagram(connection, token, copy, channel.mediaUrl);
     } else {
-      externalId = await publishTikTok(token, copy, channel.mediaUrl, channel.metadata);
+      externalId = await publishTikTok(
+        token,
+        copy,
+        channel.mediaUrl,
+        channel.metadata,
+        job.externalId,
+        async (publishId) => {
+          await getDb().publishJob.updateMany({
+            where: { id: job.id, status: 'PROCESSING' },
+            data: { externalId: publishId },
+          });
+        },
+      );
     }
   }
 
