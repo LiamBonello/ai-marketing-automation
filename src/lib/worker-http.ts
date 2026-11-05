@@ -53,7 +53,8 @@ function databaseTarget() {
     const url = new URL(connectionString);
     const hostname = url.hostname.toLowerCase();
 
-    const kind = hostname.endsWith('.pooler.supabase.com')
+    const isSupabasePooler = hostname.endsWith('.pooler.supabase.com');
+    const kind = isSupabasePooler
       ? 'supabase_pooler'
       : hostname.startsWith('db.') && hostname.endsWith('.supabase.co')
         ? 'supabase_direct'
@@ -62,6 +63,12 @@ function databaseTarget() {
     return {
       kind,
       port: url.port || 'default',
+      usernameKind:
+        isSupabasePooler && /^postgres\.[a-z0-9]+$/i.test(decodeURIComponent(url.username))
+          ? 'supabase_shared_pooler'
+          : decodeURIComponent(url.username) === 'postgres'
+            ? 'postgres'
+            : 'other',
       sslmode: url.searchParams.get('sslmode') || 'unset',
       pgbouncer: url.searchParams.get('pgbouncer') === 'true',
       connectionLimit: url.searchParams.get('connection_limit') || 'unset',
