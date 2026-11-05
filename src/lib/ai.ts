@@ -74,9 +74,7 @@ const campaignJsonSchema = {
     callToAction: { type: 'string' },
     channels: {
       type: 'array',
-      minItems: 4,
-      maxItems: 4,
-      items: {
+       items: {
         type: 'object',
         additionalProperties: false,
         properties: {
