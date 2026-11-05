@@ -14,6 +14,32 @@ function errorCode(error: unknown): string | undefined {
   return errorCode(candidate.cause);
 }
 
+function databaseTarget() {
+  const connectionString = process.env.DATABASE_URL;
+  if (!connectionString) return { kind: 'missing' };
+
+  try {
+    const url = new URL(connectionString);
+    const hostname = url.hostname.toLowerCase();
+
+    const kind = hostname.endsWith('.pooler.supabase.com')
+      ? 'supabase_pooler'
+      : hostname.startsWith('db.') && hostname.endsWith('.supabase.co')
+        ? 'supabase_direct'
+        : 'other';
+
+    return {
+      kind,
+      port: url.port || 'default',
+      sslmode: url.searchParams.get('sslmode') || 'unset',
+      pgbouncer: url.searchParams.get('pgbouncer') === 'true',
+      connectionLimit: url.searchParams.get('connection_limit') || 'unset',
+    };
+  } catch {
+    return { kind: 'invalid' };
+  }
+}
+
 export function workerFailureResponse(error: unknown) {
   const code = errorCode(error);
 
@@ -40,6 +66,7 @@ export function workerFailureResponse(error: unknown) {
     {
       error: 'Worker failed.',
       code: diagnostic,
+      databaseTarget: databaseTarget(),
     },
     { status: 500 },
   );
