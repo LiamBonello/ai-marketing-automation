@@ -229,6 +229,16 @@ Set:
 - `SMTP_USER`
 - `SMTP_PASSWORD`
 - `SMTP_FROM`
+- `BREVO_WEBHOOK_SECRET`
+
+Configure a Brevo transactional webhook to:
+
+```text
+POST https://YOUR_DOMAIN/api/email/webhook
+Authorization: Bearer YOUR_BREVO_WEBHOOK_SECRET
+```
+
+Subscribe it to at least hard bounce, invalid email, blocked, spam, and unsubscribe events. MarketPilot tags outbound SMTP messages with the internal contact identifier so those events suppress the correct contact automatically.
 
 Contacts can be imported from **My business**. The UI explicitly requires the account owner to certify an appropriate marketing basis. Each outgoing marketing email includes unsubscribe headers and a signed unsubscribe URL.
 
