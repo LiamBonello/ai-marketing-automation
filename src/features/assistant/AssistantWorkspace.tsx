@@ -375,6 +375,11 @@ export function AssistantWorkspace({
       </Stack>
 
       {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
+      {campaign.status === 'failed' && campaign.lastError && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          Publishing failed: {campaign.lastError}
+        </Alert>
+      )}
 
       <Box
         sx={{
