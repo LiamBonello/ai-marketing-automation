@@ -3,6 +3,8 @@ import { NextResponse } from 'next/server';
 type ErrorWithCode = {
   code?: unknown;
   cause?: unknown;
+  name?: unknown;
+  message?: unknown;
 };
 
 function errorCode(error: unknown): string | undefined {
@@ -12,6 +14,35 @@ function errorCode(error: unknown): string | undefined {
   if (typeof candidate.code === 'string') return candidate.code;
 
   return errorCode(candidate.cause);
+}
+
+function errorName(error: unknown): string | undefined {
+  if (!error || typeof error !== 'object') return undefined;
+
+  const candidate = error as ErrorWithCode;
+  if (typeof candidate.name === 'string') return candidate.name;
+
+  return errorName(candidate.cause);
+}
+
+function sanitizeErrorMessage(error: unknown): string | undefined {
+  if (!error || typeof error !== 'object') return undefined;
+
+  const candidate = error as ErrorWithCode;
+  const message =
+    typeof candidate.message === 'string'
+      ? candidate.message
+      : candidate.cause
+        ? sanitizeErrorMessage(candidate.cause)
+        : undefined;
+
+  if (!message) return undefined;
+
+  return message
+    .replace(/postgres(?:ql)?:\/\/[^\s@]+@/gi, 'postgresql://***@')
+    .replace(/password=[^\s&]+/gi, 'password=***')
+    .replace(/user=[^\s&]+/gi, 'user=***')
+    .slice(0, 240);
 }
 
 function databaseTarget() {
@@ -66,6 +97,9 @@ export function workerFailureResponse(error: unknown) {
     {
       error: 'Worker failed.',
       code: diagnostic,
+      errorCode: code || 'unknown',
+      errorName: errorName(error) || 'unknown',
+      message: sanitizeErrorMessage(error) || 'Unavailable.',
       databaseTarget: databaseTarget(),
     },
     { status: 500 },
