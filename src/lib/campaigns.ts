@@ -379,15 +379,29 @@ export async function scheduleCampaign(
       data: { status: 'CANCELLED' },
     });
 
-    await tx.publishJob.createMany({
-      data: enabledChannels.map((channel) => ({
-        campaignId,
-        channel: channel.channel,
-        scheduledFor,
-        idempotencyKey: `${campaignId}:${channel.channel}:${scheduledFor.toISOString()}:v${campaign.version}`,
-      })),
-      skipDuplicates: true,
-    });
+    for (const channel of enabledChannels) {
+      const idempotencyKey =
+        `${campaignId}:${channel.channel}:${scheduledFor.toISOString()}:v${campaign.version}`;
+
+      await tx.publishJob.upsert({
+        where: { idempotencyKey },
+        create: {
+          campaignId,
+          channel: channel.channel,
+          scheduledFor,
+          idempotencyKey,
+        },
+        update: {
+          scheduledFor,
+          status: 'PENDING',
+          attempts: 0,
+          lastError: null,
+          externalId: null,
+          startedAt: null,
+          completedAt: null,
+        },
+      });
+    }
 
     await tx.campaign.update({
       where: { id: campaignId },
