@@ -46,7 +46,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 });
   }
 
-  const input = webhookSchema.safeParse(await request.json());
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: 'Invalid webhook payload.' }, { status: 400 });
+  }
+
+  const input = webhookSchema.safeParse(body);
   if (!input.success) {
     return NextResponse.json({ error: 'Invalid webhook payload.' }, { status: 400 });
   }
