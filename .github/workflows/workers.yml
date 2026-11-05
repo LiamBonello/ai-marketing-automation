@@ -13,7 +13,7 @@ jobs:
     steps:
       - name: Process scheduled campaigns
         env:
-          APP_URL: ${{ secrets.MARKETPILOT_APP_URL }}
+          APP_URL: https://golden-donut-670046.netlify.app
           CRON_SECRET: ${{ secrets.MARKETPILOT_CRON_SECRET }}
         run: |
           test -n "$APP_URL"
@@ -29,7 +29,7 @@ jobs:
     steps:
       - name: Refresh organic metrics
         env:
-          APP_URL: ${{ secrets.MARKETPILOT_APP_URL }}
+          APP_URL: https://golden-donut-670046.netlify.app
           CRON_SECRET: ${{ secrets.MARKETPILOT_CRON_SECRET }}
         run: |
           test -n "$APP_URL"
