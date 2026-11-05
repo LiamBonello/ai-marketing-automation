@@ -527,20 +527,89 @@ async function publishJob(jobId: string): Promise<void> {
   ]);
 }
 
+const PROCESSING_STALE_AFTER_MS = 30 * 60 * 1000;
+
 async function finalizeCampaign(campaignId: string): Promise<void> {
+  const campaign = await getDb().campaign.findUnique({
+    where: { id: campaignId },
+    select: { scheduledFor: true, status: true, version: true },
+  });
+  if (!campaign?.scheduledFor) return;
+
+  const batchSuffix = `:${campaign.scheduledFor.toISOString()}:v${campaign.version}`;
   const jobs = await getDb().publishJob.findMany({
-    where: { campaignId },
+    where: {
+      campaignId,
+      idempotencyKey: { endsWith: batchSuffix },
+    },
     select: { status: true },
   });
-  if (jobs.some((job) => job.status === 'PENDING' || job.status === 'PROCESSING')) return;
 
-  const failed = jobs.some((job) => job.status === 'FAILED');
-  await getDb().campaign.update({
-    where: { id: campaignId },
+  if (
+    jobs.length === 0 ||
+    jobs.some((job) => job.status === 'PENDING' || job.status === 'PROCESSING')
+  ) {
+    return;
+  }
+
+  const activeJobs = jobs.filter((job) => job.status !== 'CANCELLED');
+  if (activeJobs.length === 0) return;
+
+  const failed = activeJobs.some((job) => job.status === 'FAILED');
+  await getDb().campaign.updateMany({
+    where: {
+      id: campaignId,
+      version: campaign.version,
+      scheduledFor: campaign.scheduledFor,
+      status: { in: ['SCHEDULED', 'PUBLISHING'] },
+    },
     data: failed
       ? { status: 'FAILED', lastError: 'One or more channels failed to publish.' }
       : { status: 'PUBLISHED', publishedAt: new Date(), lastError: null },
   });
+}
+
+async function failStaleProcessingJobs(): Promise<void> {
+  const cutoff = new Date(Date.now() - PROCESSING_STALE_AFTER_MS);
+  const staleJobs = await getDb().publishJob.findMany({
+    where: {
+      status: 'PROCESSING',
+      startedAt: { lt: cutoff },
+    },
+    select: { id: true, campaignId: true },
+  });
+  if (staleJobs.length === 0) return;
+
+  const now = new Date();
+  await getDb().publishJob.updateMany({
+    where: {
+      id: { in: staleJobs.map((job) => job.id) },
+      status: 'PROCESSING',
+    },
+    data: {
+      status: 'FAILED',
+      completedAt: now,
+      lastError:
+        'Publishing worker stopped before completion. Manual review is required before retrying to avoid duplicate publishing.',
+    },
+  });
+
+  for (const campaignId of new Set(staleJobs.map((job) => job.campaignId))) {
+    await finalizeCampaign(campaignId);
+  }
+}
+
+async function reconcilePublishingCampaigns(limit = 100): Promise<void> {
+  const campaigns = await getDb().campaign.findMany({
+    where: { status: 'PUBLISHING' },
+    orderBy: { updatedAt: 'asc' },
+    take: limit,
+    select: { id: true },
+  });
+
+  for (const campaign of campaigns) {
+    await finalizeCampaign(campaign.id);
+  }
 }
 
 export async function processDuePublishJobs(limit = 20): Promise<{
@@ -548,6 +617,9 @@ export async function processDuePublishJobs(limit = 20): Promise<{
   succeeded: number;
   failed: number;
 }> {
+  await failStaleProcessingJobs();
+  await reconcilePublishingCampaigns();
+
   let processed = 0;
   let succeeded = 0;
   let failed = 0;
