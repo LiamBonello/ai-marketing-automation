@@ -188,7 +188,16 @@ SMTP_SECURE=false
 SMTP_USER=...
 SMTP_PASSWORD=...
 SMTP_FROM=...
+BREVO_WEBHOOK_SECRET=...
 ```
+
+Create a Brevo transactional webhook pointing to:
+
+```text
+https://YOUR_DOMAIN/api/email/webhook
+```
+
+Use bearer authentication with the same `BREVO_WEBHOOK_SECRET` and subscribe to hard bounce, invalid email, blocked, spam, and unsubscribe events.
 
 Verify the sender/domain before sending real marketing mail.
 
