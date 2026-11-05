@@ -466,6 +466,7 @@ async function publishEmail(input: {
           headers: {
             'List-Unsubscribe': `<${unsubscribeUrl.toString()}>`,
             'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+            'X-Mailin-custom': `marketpilot-contact:${contact.id}`,
           },
         });
       }),
