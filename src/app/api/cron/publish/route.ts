@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { processDuePublishJobs } from '@/lib/publisher';
 import { safeEqual } from '@/lib/crypto';
+import { workerFailureResponse } from '@/lib/worker-http';
 
 export async function POST(request: Request) {
   const configured = process.env.CRON_SECRET;
@@ -12,6 +13,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 });
   }
 
-  const result = await processDuePublishJobs();
-  return NextResponse.json(result);
+  try {
+    const result = await processDuePublishJobs();
+    return NextResponse.json(result);
+  } catch (error) {
+    return workerFailureResponse(error);
+  }
 }
