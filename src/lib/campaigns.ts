@@ -426,6 +426,9 @@ export async function cancelSchedule(auth: AuthContext, campaignId: string) {
     where: { id: campaignId, businessId: auth.businessId },
   });
   if (!campaign) throw new Error('CAMPAIGN_NOT_FOUND');
+  if (campaign.status !== 'SCHEDULED') {
+    throw new Error('Only a scheduled campaign can have its schedule cancelled.');
+  }
 
   await getDb().$transaction([
     getDb().publishJob.updateMany({
