@@ -43,3 +43,5 @@ jobs:
 # probe PR 7 deploy preview
 
 # probe production after corrected Supabase credentials
+
+# probe production after final Supabase username fix
