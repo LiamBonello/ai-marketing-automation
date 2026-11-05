@@ -18,7 +18,7 @@ jobs:
         run: |
           test -n "$APP_URL"
           test -n "$CRON_SECRET"
-          curl --fail --silent --show-error \
+          curl --fail-with-body --silent --show-error \
             --request POST \
             --header "Authorization: Bearer $CRON_SECRET" \
             "${APP_URL%/}/api/cron/publish"
@@ -34,7 +34,7 @@ jobs:
         run: |
           test -n "$APP_URL"
           test -n "$CRON_SECRET"
-          curl --fail --silent --show-error \
+          curl --fail-with-body --silent --show-error \
             --request POST \
             --header "Authorization: Bearer $CRON_SECRET" \
             "${APP_URL%/}/api/cron/metrics"
