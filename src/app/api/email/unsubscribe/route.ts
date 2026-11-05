@@ -9,17 +9,41 @@ function response(message: string, status = 200) {
   );
 }
 
-export async function GET(request: Request) {
+function requestCredentials(request: Request): { contactId: string | null; token: string | null } {
   const url = new URL(request.url);
-  const contactId = url.searchParams.get('contact');
-  const token = url.searchParams.get('token');
-  if (!contactId || !token || !verifyUnsubscribeToken(contactId, token)) {
-    return response('This unsubscribe link is invalid.', 400);
-  }
+  return {
+    contactId: url.searchParams.get('contact'),
+    token: url.searchParams.get('token'),
+  };
+}
 
-  await getDb().contact.updateMany({
+async function unsubscribe(contactId: string, token: string): Promise<boolean> {
+  if (!verifyUnsubscribeToken(contactId, token)) return false;
+
+  const result = await getDb().contact.updateMany({
     where: { id: contactId },
     data: { status: 'UNSUBSCRIBED', unsubscribedAt: new Date() },
   });
-  return response('You have been unsubscribed and will not receive further marketing emails from this business.');
+
+  return result.count === 1;
+}
+
+export async function GET(request: Request) {
+  const { contactId, token } = requestCredentials(request);
+  if (!contactId || !token || !(await unsubscribe(contactId, token))) {
+    return response('This unsubscribe link is invalid.', 400);
+  }
+
+  return response(
+    'You have been unsubscribed and will not receive further marketing emails from this business.',
+  );
+}
+
+export async function POST(request: Request) {
+  const { contactId, token } = requestCredentials(request);
+  if (!contactId || !token || !(await unsubscribe(contactId, token))) {
+    return NextResponse.json({ error: 'Invalid unsubscribe request.' }, { status: 400 });
+  }
+
+  return new NextResponse(null, { status: 200 });
 }
