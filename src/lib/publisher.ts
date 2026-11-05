@@ -575,7 +575,7 @@ async function finalizeCampaign(campaignId: string): Promise<void> {
       campaignId,
       idempotencyKey: { endsWith: batchSuffix },
     },
-    select: { status: true },
+    select: { status: true, channel: true, lastError: true },
   });
 
   if (
@@ -588,7 +588,17 @@ async function finalizeCampaign(campaignId: string): Promise<void> {
   const activeJobs = jobs.filter((job) => job.status !== 'CANCELLED');
   if (activeJobs.length === 0) return;
 
-  const failed = activeJobs.some((job) => job.status === 'FAILED');
+  const failedJobs = activeJobs.filter((job) => job.status === 'FAILED');
+  const failureMessage = failedJobs.length
+    ? failedJobs
+        .map(
+          (job) =>
+            `${job.channel}: ${job.lastError || 'Publishing failed without a provider error message.'}`,
+        )
+        .join(' | ')
+        .slice(0, 1000)
+    : null;
+
   await getDb().campaign.updateMany({
     where: {
       id: campaignId,
@@ -596,8 +606,8 @@ async function finalizeCampaign(campaignId: string): Promise<void> {
       scheduledFor: campaign.scheduledFor,
       status: { in: ['SCHEDULED', 'PUBLISHING'] },
     },
-    data: failed
-      ? { status: 'FAILED', lastError: 'One or more channels failed to publish.' }
+    data: failureMessage
+      ? { status: 'FAILED', lastError: failureMessage }
       : { status: 'PUBLISHED', publishedAt: new Date(), lastError: null },
   });
 }
