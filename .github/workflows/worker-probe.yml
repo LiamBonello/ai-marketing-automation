@@ -49,3 +49,13 @@ jobs:
 # probe username-shape diagnostic
 
 # probe production after database password reset
+
+
+  health:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check production health
+        env:
+          APP_URL: https://golden-donut-670046.netlify.app
+        run: |
+          curl --fail-with-body --silent --show-error "${APP_URL%/}/api/health"
