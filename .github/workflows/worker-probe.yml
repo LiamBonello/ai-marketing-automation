@@ -33,3 +33,5 @@ jobs:
             --request POST \
             --header "Authorization: Bearer $CRON_SECRET" \
             "${APP_URL%/}/api/cron/metrics"
+
+# rerun after database-target diagnostics
