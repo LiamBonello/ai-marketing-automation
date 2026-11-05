@@ -283,6 +283,9 @@ async function publishTikTok(
     const allowComment = settings.allowComment === true && !creator.commentDisabled;
     const allowDuet = settings.allowDuet === true && !creator.duetDisabled;
     const allowStitch = settings.allowStitch === true && !creator.stitchDisabled;
+    const aiGenerated = settings.aiGenerated === true;
+    const brandOrganic = settings.brandOrganic === true;
+    const brandContent = settings.brandContent === true;
 
     const video = isVideo(mediaUrl);
     const endpoint = video
@@ -297,7 +300,9 @@ async function publishTikTok(
             disable_comment: !allowComment,
             disable_duet: !allowDuet,
             disable_stitch: !allowStitch,
-            brand_organic_toggle: true,
+            brand_organic_toggle: brandOrganic,
+            brand_content_toggle: brandContent,
+            is_aigc: aiGenerated,
           },
           source_info: {
             source: 'PULL_FROM_URL',
@@ -311,7 +316,8 @@ async function publishTikTok(
             privacy_level: privacyLevel,
             disable_comment: !allowComment,
             auto_add_music: true,
-            brand_organic_toggle: true,
+            brand_organic_toggle: brandOrganic,
+            brand_content_toggle: brandContent,
           },
           source_info: {
             source: 'PULL_FROM_URL',
@@ -320,6 +326,7 @@ async function publishTikTok(
           },
           post_mode: 'DIRECT_POST',
           media_type: 'PHOTO',
+          is_aigc: aiGenerated,
         };
 
     const response = await fetch(endpoint, {
