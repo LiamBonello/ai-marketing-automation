@@ -92,7 +92,6 @@ export async function POST(request: Request) {
   if (updated.count === 1) {
     await audit({
       organizationId: contact.business.organizationId,
-      actorUserId: null,
       action: suppression.action,
       entityType: 'contact',
       entityId: contact.id,
