@@ -1,0 +1,35 @@
+name: MarketPilot worker probe
+
+on:
+  push:
+    branches:
+      - chatgpt/worker-probe
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Probe publish worker
+        env:
+          APP_URL: https://golden-donut-670046.netlify.app
+          CRON_SECRET: ${{ secrets.MARKETPILOT_CRON_SECRET }}
+        run: |
+          test -n "$CRON_SECRET"
+          curl --fail-with-body --silent --show-error \
+            --request POST \
+            --header "Authorization: Bearer $CRON_SECRET" \
+            "${APP_URL%/}/api/cron/publish"
+
+  metrics:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Probe metrics worker
+        env:
+          APP_URL: https://golden-donut-670046.netlify.app
+          CRON_SECRET: ${{ secrets.MARKETPILOT_CRON_SECRET }}
+        run: |
+          test -n "$CRON_SECRET"
+          curl --fail-with-body --silent --show-error \
+            --request POST \
+            --header "Authorization: Bearer $CRON_SECRET" \
+            "${APP_URL%/}/api/cron/metrics"
